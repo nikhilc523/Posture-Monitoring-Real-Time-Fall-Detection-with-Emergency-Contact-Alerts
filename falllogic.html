@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fall Detection Algorithm - CS663 Computer Vision</title>
+    <link rel="preload" href="images/04_fall_sequence.png" as="image">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6" defer></script>
+    <script id="MathJax-script" async defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+    <style>
+        /* CSS Variables */
+        :root {
+            --blue: #0071e3;
+            --text: #1d1d1f;
+            --secondary-text: #515154;
+            --muted: #86868b;
+            --bg: #fff;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            --border: #e9eef5;
+            --gradient-start: #f9fafc;
+            --gradient-end: #fff;
+            --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(249,250,252,0.8) 100%);
+            --glass-bg: rgba(255,255,255,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: linear-gradient(to bottom, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            height: 100%;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--blue);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: var(--text);
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            z-index: 1001;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Loading optimization */
+        img {
+            content-visibility: auto;
+            contain-intrinsic-size: 250px;
+        }
+
+        .diagram-card img, .quiz-image {
+            background: #f8f9fa;
+            min-height: 200px;
+        }
+
+        /* Loading state */
+        .loading-placeholder {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Apple-style Code Cards */
+        .code-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .code-card {
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border-color: var(--blue);
+        }
+
+        .code-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .code-card-icon {
+            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 113, 227, 0.1);
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .code-card-title h3 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .code-card-title p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+        }
+
+        .code-card-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+
+        .code-card-preview code {
+            font-size: 0.85rem;
+            color: #333;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .code-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .code-card-badge {
+            background: var(--blue);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .code-card-arrow {
+            font-size: 1.2rem;
+            color: var(--blue);
+            font-weight: 600;
+        }
+
+        /* Image Credits */
+        .diagram-card {
+            position: relative;
+        }
+
+        .quiz-image {
+            position: relative;
+        }
+
+        .image-credit {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(0, 113, 227, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--blue);
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-credit:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
+            border-color: var(--blue);
+        }
+
+        .credit-popup {
+            position: absolute;
+            bottom: 40px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.92);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 150;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-credit:hover .credit-popup {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* Code Modal */
+        .code-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .code-modal-overlay.active {
+            display: flex;
+        }
+
+        .code-modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .code-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .code-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .code-modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--secondary-text);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .code-modal-close:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text);
+        }
+
+        .code-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .code-modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .copy-code-btn {
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-code-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .code-block-modal {
+            background: #f8f9fa;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre;
+            color: #333;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 997;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background: #e5e5e7;
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 2px;
+            width: 50%;
+            transition: width 1.5s ease-out;
+        }
+
+        /* Intro Section */
+        .intro-section {
+            padding: 180px 2rem 80px;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .intro-section h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .intro-section .subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .intro-section .description {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 3rem;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.4s ease;
+        }
+
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.15);
+        }
+
+        .card-content {
+            padding: 3rem;
+        }
+
+        .card-content h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .card-content p {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .card-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-content li {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .card-content li::before {
+            content: "•";
+            color: var(--blue);
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: -0.1rem;
+        }
+
+        .card-content ol {
+            list-style: decimal;
+            padding-left: 2rem;
+        }
+
+        .card-content ol li {
+            padding-left: 0.5rem;
+        }
+
+        .card-content ol li::before {
+            display: none;
+        }
+
+        /* Image Placeholders */
+        .image-placeholder {
+            width: 100%;
+            height: 300px;
+            background: #f5f5f7;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 1rem;
+            text-align: center;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .image-caption {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-top: 1rem;
+            font-style: italic;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            color: #e5e5e7;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .code-block .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #e5e5e7;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .code-block .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Math Equations */
+        .math-block {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        /* Citations */
+        a[href^="bibliography.html"] {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 0.1rem;
+        }
+
+        a[href^="bibliography.html"]:hover {
+            text-decoration: underline;
+        }
+
+        /* Highlight Spans */
+        .highlight, strong {
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* Carousel Section */
+        .carousel-section {
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .carousel-container {
+            position: relative;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 4rem;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            gap: 2rem;
+        }
+
+        .carousel-card {
+            flex: 0 0 400px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .carousel-card.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .carousel-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        .card-summary {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .card-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Carousel Navigation */
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .carousel-nav:hover {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-nav.prev {
+            left: 1rem;
+        }
+
+        .carousel-nav.next {
+            right: 1rem;
+        }
+
+        /* Progress Dots */
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--blue);
+            transform: scale(1.2);
+        }
+
+        .dot:hover {
+            background: var(--blue);
+            opacity: 0.7;
+        }
+
+        /* Collapsible Code Sections */
+        .code-section {
+            margin: 2rem 0;
+        }
+
+        .code-toggle {
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-toggle:hover {
+            background: #0062c8;
+            transform: translateY(-2px);
+        }
+
+        .code-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .code-toggle.active .code-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .code-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .code-content.active {
+            max-height: 1000px;
+        }
+
+        .code-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        /* Diagram styles */
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .diagram-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .diagram-placeholder {
+            width: 100%;
+            height: 250px;
+            background: #e9ecef;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .diagram-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .diagram-description {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            line-height: 1.4;
+        }
+
+        /* Quiz Section */
+        .quiz-section {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 3rem 0;
+        }
+
+        .quiz-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .quiz-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.15);
+        }
+
+        .quiz-image {
+            width: 100%;
+            height: 200px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .quiz-caption {
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        .quiz-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .quiz-btn {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            border: 2px solid var(--blue);
+            border-radius: 25px;
+            background: white;
+            color: var(--blue);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-btn:hover {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .quiz-btn.correct {
+            background: #34c759;
+            border-color: #34c759;
+            color: white;
+        }
+
+        .quiz-btn.incorrect {
+            background: #ff3b30;
+            border-color: #ff3b30;
+            color: white;
+        }
+
+        .quiz-feedback {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            display: none;
+        }
+
+        .quiz-feedback.correct {
+            background: rgba(52, 199, 89, 0.1);
+            color: #1d4ed8;
+            border: 1px solid rgba(52, 199, 89, 0.3);
+        }
+
+        .quiz-feedback.incorrect {
+            background: rgba(255, 59, 48, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+        }
+
+        /* Audio Section */
+        .audio-section {
+            background: #f5f5f7;
+            border-radius: 18px;
+            padding: 2rem;
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .audio-section audio {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 1rem;
+        }
+
+        /* Bottom Sticky Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 113, 227, 0.1);
+            padding: 1.5rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .bottom-nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 1rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0062c8;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-primary.disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .btn-primary.disabled:hover {
+            background: #ccc;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--blue);
+            border: 1px solid rgba(0, 113, 227, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem 8rem;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            margin-top: 6rem;
+        }
+
+        footer p {
+            margin-bottom: 1rem;
+        }
+
+        .back-to-top {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-to-top:hover {
+            text-decoration: underline;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .intro-section {
+                padding: 160px 1rem 60px;
+            }
+
+            .card-content {
+                padding: 2rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .bottom-nav {
+                padding: 1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .quiz-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quiz-buttons {
+                flex-direction: column;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html">Sensors</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="posture.html">Posture</a></li>
+                <li><a href="falllogic.html" class="active">Fall Logic</a></li>
+                <li><a href="emergency.html">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">12 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/falllogic.mp3" preload="metadata"></audio>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-text">Step 5 of 8: Fall Detection Algorithm</div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Intro Section -->
+    <section class="intro-section">
+        <h1>Fall Detection Algorithm</h1>
+        <p class="subtitle">On-device, rule-based, safe with human confirmation</p>
+        <p class="description">A fall is detected as a rapid, involuntary descent followed by an orientation flip and stillness. This page explains the algorithm used to detect such events in real time on-device, before triggering a 10–15 s "I'm OK?" countdown and, if needed, <strong>SMS/GPS</strong> alerts.</p>
+    </section>
+
+    <div class="container">
+        <!-- Signal Inputs -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Signal Inputs</h2>
+                <p>Our algorithm processes specific body landmarks from pose estimation models: shoulders, hips, neck, knees, and ankles. All coordinates are normalized to [0,1] range to ensure thresholds transfer across different devices and camera resolutions.</p>
+
+                <h3>Derived Signals</h3>
+                <p>From these landmarks, we compute several critical signals for each frame t:</p>
+
+                <ul>
+                    <li><strong>Torso Vector:</strong> T(t) = neck – midHip</li>
+                    <li><strong>Tilt Angle:</strong> α(t) relative to vertical axis</li>
+                    <li><strong>Hip Position:</strong> h(t) as average y-coordinate</li>
+                    <li><strong>Vertical Velocity:</strong> v(t) = Δh/Δt at <strong>30 FPS</strong></li>
+                    <li><strong>Motion Magnitude:</strong> Mean keypoint displacement between frames</li>
+                </ul>
+
+                <div class="math-block">
+                    <p><strong>Tilt Angle:</strong></p>
+                    $$\alpha(t) = \arccos\!\left(\frac{T_y}{\sqrt{T_x^2 + T_y^2}}\right)\times \frac{180}{\pi}$$
+                </div>
+
+                <div class="math-block">
+                    <p><strong>Vertical Velocity:</strong></p>
+                    $$v(t) = \frac{h(t) - h(t-1)}{\Delta t}$$
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">Where Δt = 1/FPS ≈ <strong>33.3 ms</strong> at <strong>30 FPS</strong>. Normalized by body height for device independence <a href="bibliography.html#ref-1">[1]</a>.</p>
+                </div>
+
+                <h3>Visual Explanation</h3>
+                <div class="diagram-grid">
+                    <div class="diagram-card">
+                        <img src="images/torso_vector.png" alt="Torso vector T(t) = neck - midHip" style="width: 100%; height: 250px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy" decoding="async">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                        <div class="diagram-title">Torso Vector</div>
+                        <div class="diagram-description">
+                            The torso vector connects the mid-hip point to the neck, representing the primary body axis used for tilt calculations.
+                        </div>
+                    </div>
+                    <div class="diagram-card">
+                        <img src="images/tilt_angle.png" alt="Tilt angle α relative to vertical" style="width: 100%; height: 250px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy" decoding="async">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                        <div class="diagram-title">Tilt Angle α(t)</div>
+                        <div class="diagram-description">
+                            Angle between torso vector and vertical axis. <strong>0°</strong> = upright, <strong>90°</strong> = horizontal.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="diagram-grid">
+                    <div class="diagram-card">
+                        <img src="images/hip_position.png" alt="Hip position tracking over time" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                        <div class="diagram-title">Hip Position h(t)</div>
+                        <div class="diagram-description">
+                            Average y-coordinate of left and right hip keypoints tracked over time.
+                        </div>
+                    </div>
+                    <div class="diagram-card">
+                        <img src="images/vertical_velocity.png" alt="Vertical velocity calculation" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                        <div class="diagram-title">Vertical Velocity v(t)</div>
+                        <div class="diagram-description">
+                            Rate of change in hip position: v(t) = Δh/Δt at <strong>30 FPS</strong>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="diagram-card" style="margin: 2rem 0;">
+                    <img src="images/motion_magnitude.png" alt="Motion magnitude calculation" style="width: 100%; height: 250px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy">
+                    <div class="image-credit">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <div class="diagram-title">Motion Magnitude</div>
+                    <div class="diagram-description">
+                        Mean displacement of all keypoints between consecutive frames, indicating overall body movement.
+                    </div>
+                </div>
+
+                <div style="position: relative; display: inline-block; width: 100%; text-align: center;">
+                    <img src="images/04_fall_sequence.png" alt="Fall sequence diagram" style="width: 100%; max-width: 800px; height: auto; border-radius: 16px; margin: 2rem auto; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.1);" loading="lazy">
+                    <div class="image-credit" style="position: absolute; top: 24px; right: calc(50% - 400px + 12px);">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                </div>
+                <div class="image-caption" style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">Complete fall detection sequence showing all three stages</div>
+            </div>
+        </div>
+
+        <!-- State Machine Algorithm -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Finite State Machine Algorithm</h2>
+                <p>Our fall detection uses a <strong>finite state machine (FSM)</strong> approach with four distinct states. This rule-based method provides <strong>interpretable</strong> and <strong>lightweight</strong> detection suitable for real-time mobile deployment <a href="bibliography.html#ref-2">[2]</a>.</p>
+
+                <div class="diagram-card" style="margin: 2rem 0;">
+                    <img src="images/fall-state-diagram.png" alt="Fall detection state machine diagram" style="width: 100%; height: 300px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy">
+                    <div class="image-credit">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <div class="diagram-title">Fall Detection State Machine</div>
+                    <div class="diagram-description">
+                        Four-state FSM: IDLE → DESCENT → HORIZONTAL → FALL_CONFIRMED. Each transition requires specific conditions to be met within time windows.
+                    </div>
+                </div>
+
+                <h3>State Descriptions</h3>
+                <div class="state-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                    <div class="state-card" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--blue); margin-bottom: 1rem;">🟢 IDLE</h4>
+                        <p><strong>Condition:</strong> Normal activity, waiting for descent trigger</p>
+                        <p><strong>Transition:</strong> Sustained downward velocity → DESCENT</p>
+                        <p><strong>Duration:</strong> Indefinite (default state)</p>
+                    </div>
+                    <div class="state-card" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--secondary-text); margin-bottom: 1rem;">🟡 DESCENT</h4>
+                        <p><strong>Condition:</strong> <strong>v(t) &lt; -0.28</strong> body heights/sec for <strong>4 frames</strong></p>
+                        <p><strong>Transition:</strong> Torso becomes horizontal → HORIZONTAL</p>
+                        <p><strong>Timeout:</strong> Return to IDLE if descent stops</p>
+                    </div>
+                    <div class="state-card" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--blue); margin-bottom: 1rem;">🟠 HORIZONTAL</h4>
+                        <p><strong>Condition:</strong> Torso tilt <strong>α ≥ 65°</strong> from vertical</p>
+                        <p><strong>Transition:</strong> Sustained stillness → FALL_CONFIRMED</p>
+                        <p><strong>Timeout:</strong> <strong>2 seconds</strong> max window</p>
+                    </div>
+                    <div class="state-card" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--secondary-text); margin-bottom: 1rem;">🔴 FALL_CONFIRMED</h4>
+                        <p><strong>Condition:</strong> Motion magnitude <strong>≤ 0.02</strong> for <strong>12 frames</strong></p>
+                        <p><strong>Action:</strong> Trigger "I'm OK?" countdown</p>
+                        <p><strong>Reset:</strong> Return to IDLE after alert</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3-Stage Rule Logic -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>3-Stage Rule Logic</h2>
+                <p>Our detection algorithm requires three conditions to occur sequentially within ~1–2 seconds. Explore each stage below:</p>
+            </div>
+        </div>
+
+        <!-- Carousel for 3-Stage Logic -->
+        <section class="carousel-section">
+            <div class="carousel-container">
+                <div class="carousel-nav prev" onclick="previousStage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15,18 9,12 15,6"></polyline>
+                    </svg>
+                </div>
+                <div class="carousel-nav next" onclick="nextStage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9,18 15,12 9,6"></polyline>
+                    </svg>
+                </div>
+
+                <div class="carousel-wrapper">
+                    <div class="carousel-track" id="stageCarouselTrack">
+                        <!-- Stage 1: Rapid Descent -->
+                        <div class="carousel-card active">
+                            <div style="position: relative;">
+                                <img src="images/stage1_descent.png" alt="Rapid downward motion detection" class="card-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1.5rem;" loading="lazy">
+                                <div class="image-credit">
+                                    AI
+                                    <div class="credit-popup">Generated by Gemini</div>
+                                </div>
+                            </div>
+                            <h3 class="card-title">Stage 1: Rapid Descent</h3>
+                            <p class="card-summary">Detects when the person's body drops rapidly toward the ground, indicating loss of postural control.</p>
+                            <ul class="card-features">
+                                <li><strong>Condition:</strong> v(t) < –<strong>0.20–0.35</strong> body heights per second</li>
+                                <li><strong>Duration:</strong> 3–5 frames (~0.1–0.17 s at <strong>30 FPS</strong>)</li>
+                                <li><strong>Purpose:</strong> Distinguishes falls from slow, controlled movements like sitting</li>
+                                <li><strong>Key Signal:</strong> Hip vertical velocity exceeds downward threshold</li>
+                            </ul>
+                        </div>
+
+                        <!-- Stage 2: Orientation Flip -->
+                        <div class="carousel-card">
+                            <div style="position: relative;">
+                                <img src="images/stage2_orientation.png" alt="Body orientation change detection" class="card-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1.5rem;" loading="lazy">
+                                <div class="image-credit">
+                                    AI
+                                    <div class="credit-popup">Generated by Gemini</div>
+                                </div>
+                            </div>
+                            <h3 class="card-title">Stage 2: Orientation Flip</h3>
+                            <p class="card-summary">Confirms the body transitions from upright to horizontal orientation during the fall.</p>
+                            <ul class="card-features">
+                                <li><strong>Condition:</strong> Torso tilt α ≥ <strong>65°</strong> from vertical</li>
+                                <li><strong>Baseline:</strong> Upright posture ≤ <strong>20°</strong></li>
+                                <li><strong>Purpose:</strong> Separates true falls from fast sitting (which stays < 65°)</li>
+                                <li><strong>Key Signal:</strong> Torso vector angle relative to vertical axis</li>
+                            </ul>
+                        </div>
+
+                        <!-- Stage 3: Stillness -->
+                        <div class="carousel-card">
+                            <div style="position: relative;">
+                                <img src="images/stage3_stillness.png" alt="Post-impact stillness detection" class="card-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1.5rem;" loading="lazy">
+                                <div class="image-credit">
+                                    AI
+                                    <div class="credit-popup">Generated by Gemini</div>
+                                </div>
+                            </div>
+                            <h3 class="card-title">Stage 3: Post-Impact Stillness</h3>
+                            <p class="card-summary">Detects the characteristic stillness that follows a fall impact, unlike continuous motion in normal activities.</p>
+                            <ul class="card-features">
+                                <li><strong>Condition:</strong> motionMag ≤ <strong>0.02</strong> normalized units</li>
+                                <li><strong>Duration:</strong> 10–20 frames (~0.3–0.6 s at <strong>30 FPS</strong>)</li>
+                                <li><strong>Purpose:</strong> Confirms impact occurred, not just rapid movement</li>
+                                <li><strong>Key Signal:</strong> Average keypoint displacement between frames</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Dots -->
+                <div class="carousel-dots">
+                    <div class="dot active" onclick="goToStage(0)"></div>
+                    <div class="dot" onclick="goToStage(1)"></div>
+                    <div class="dot" onclick="goToStage(2)"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Smoothing & Calibration -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Smoothing & Calibration</h2>
+                <p>Raw pose estimation can be noisy. We apply smoothing and calibration techniques:</p>
+
+                <h3>EMA Filter</h3>
+                <div class="math-block">
+                    $$\hat{\theta}(t) = \lambda \theta(t) + (1-\lambda)\hat{\theta}(t-1)$$
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">λ = 0.5–0.8</p>
+                </div>
+
+                <h3>Calibration</h3>
+                <ul>
+                    <li>Record upright angle baseline</li>
+                    <li>Simulate sit-down to estimate normal descent velocity</li>
+                    <li>Adjust thresholds by <strong>FPS</strong></li>
+                </ul>
+
+                <p><strong>Example:</strong> At <strong>30 FPS</strong>, N_desc = 4 ≈ 133 ms</p>
+            </div>
+        </div>
+
+        <!-- Edge Cases -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Edge Cases</h2>
+                <p>Common challenging scenarios and their handling:</p>
+
+                <div style="position: relative; display: inline-block; width: 100%; text-align: center;">
+                    <img src="images/edge_cases_diagram.png" alt="Edge cases in fall detection" style="width: 100%; max-width: 700px; height: auto; border-radius: 16px; margin: 2rem auto; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.1);" loading="lazy">
+                    <div class="image-credit" style="position: absolute; top: 24px; right: calc(50% - 350px + 12px);">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                </div>
+                <div class="image-caption" style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">Common edge cases that could trigger false positives and how the algorithm handles them</div>
+
+                <ul>
+                    <li><strong>Fast sit-down:</strong> Descent but no α ≥ <strong>65°</strong></li>
+                    <li><strong>Bending:</strong> Tilt but no descent/stillness</li>
+                    <li><strong>Occlusion/camera tilt:</strong> Gate confidence when keypoint quality drops</li>
+                    <li><strong>Multi-person:</strong> Track main subject using centroid tracking</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Implementation Code -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Pseudo Code</h2>
+                <p>Complete state machine implementation (IDLE → DESCENT → HORIZONTAL → FALL_CONFIRMED). Choose your preferred implementation:</p>
+
+                <div class="code-cards-grid">
+                    <!-- Kotlin Card -->
+                    <div class="code-card" onclick="openCodeModal('kotlin')">
+                        <div class="code-card-header">
+                            <div class="code-card-icon">📱</div>
+                            <div class="code-card-title">
+                                <h3>Kotlin Implementation</h3>
+                                <p>Android Pseudo Code</p>
+                            </div>
+                        </div>
+                        <div class="code-card-preview">
+                            <code>enum class FallState {
+    IDLE, DESCENT, HORIZONTAL, FALL_CONFIRMED
+}</code>
+                        </div>
+                        <div class="code-card-footer">
+                            <span class="code-card-badge">Android</span>
+                            <span class="code-card-arrow">→</span>
+                        </div>
+                    </div>
+
+                    <!-- Python Card -->
+                    <div class="code-card" onclick="openCodeModal('python')">
+                        <div class="code-card-header">
+                            <div class="code-card-icon">🐍</div>
+                            <div class="code-card-title">
+                                <h3>Python Reference</h3>
+                                <p>Testing & Prototyping</p>
+                            </div>
+                        </div>
+                        <div class="code-card-preview">
+                            <code>class FallDetector:
+    def __init__(self):
+        self.state = "IDLE"</code>
+                        </div>
+                        <div class="code-card-footer">
+                            <span class="code-card-badge">Python</span>
+                            <span class="code-card-arrow">→</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Algorithm Comparison -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Rule-Based vs ML Sequence Models</h2>
+                <p>Comparison of different approaches for temporal fall detection, highlighting trade-offs between interpretability, accuracy, and computational requirements.</p>
+
+                <div style="overflow-x: auto; margin: 2rem 0;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.08);">
+                        <thead>
+                            <tr style="background: var(--blue); color: white;">
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Approach</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Pros</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">Cons</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600;">References</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 1rem; font-weight: 600; color: var(--blue);">Rule-based FSM</td>
+                                <td style="padding: 1rem;">
+                                    • <strong>Fast</strong> (<strong>25 ms/frame</strong>)<br>
+                                    • <strong>Interpretable</strong> logic<br>
+                                    • <strong>Lightweight</strong> (no training)<br>
+                                    • <strong>Real-time</strong> capable
+                                </td>
+                                <td style="padding: 1rem;">
+                                    • Sensitive to <strong>hard negatives</strong> (sit-downs)<br>
+                                    • <strong>Fixed thresholds</strong> don't adapt<br>
+                                    • <strong>91.6% accuracy</strong> ceiling
+                                </td>
+                                <td style="padding: 1rem;"><a href="bibliography.html#ref-2">[2]</a></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 1rem; font-weight: 600; color: var(--blue);">LSTM/TCN</td>
+                                <td style="padding: 1rem;">
+                                    • <strong>Captures temporal nuance</strong><br>
+                                    • <strong>Better generalization</strong><br>
+                                    • <strong>95.2% accuracy</strong> achievable<br>
+                                    • <strong>Adaptive</strong> to user patterns
+                                </td>
+                                <td style="padding: 1rem;">
+                                    • <strong>Higher compute/battery</strong><br>
+                                    • <strong>Training data</strong> required<br>
+                                    • <strong>Black box</strong> decisions<br>
+                                    • <strong>200 ms</strong> latency
+                                </td>
+                                <td style="padding: 1rem;"><a href="bibliography.html#ref-1">[1]</a></td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 1rem; font-weight: 600; color: var(--blue);">Transformer</td>
+                                <td style="padding: 1rem;">
+                                    • <strong>Attention</strong> mechanisms<br>
+                                    • <strong>Long-range</strong> dependencies<br>
+                                    • <strong>State-of-the-art</strong> accuracy<br>
+                                    • <strong>Multi-modal</strong> fusion
+                                </td>
+                                <td style="padding: 1rem;">
+                                    • <strong>Highest compute</strong> cost<br>
+                                    • <strong>Large model</strong> size<br>
+                                    • <strong>Overkill</strong> for mobile<br>
+                                    • <strong>500+ ms</strong> latency
+                                </td>
+                                <td style="padding: 1rem;"><a href="bibliography.html#ref-1">[1]</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem; margin: 2rem 0;">
+                    <h4 style="color: var(--blue); margin-bottom: 1rem;">💡 Hybrid Approach</h4>
+                    <p><strong>Best of both worlds:</strong> Use rule-based FSM for <strong>initial filtering</strong> (fast, low power), then apply <strong>LSTM re-scoring</strong> only on potential fall candidates. This reduces false positives while maintaining <strong>real-time performance</strong>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Evaluation Protocol</h2>
+                <p>Comprehensive evaluation metrics for safety-critical fall detection systems, emphasizing both accuracy and real-time performance <a href="bibliography.html#ref-1">[1]</a>.</p>
+
+                <h3>Classification Metrics</h3>
+                <div class="math-block">
+                    $$Precision = \frac{TP}{TP+FP}, \quad Recall = \frac{TP}{TP+FN}, \quad F1 = 2\cdot\frac{PR}{P+R}$$
+                    $$Specificity = \frac{TN}{TN+FP}, \quad ROC\text{-}AUC = \int_0^1 TPR \, d(FPR)$$
+                </div>
+
+                <div class="diagram-card" style="margin: 2rem 0;">
+                    <img src="images/fall-confusion.png" alt="Confusion matrix for fall detection" style="width: 100%; height: 300px; object-fit: contain; border-radius: 12px; background: #f8f9fa;" loading="lazy">
+                    <div class="image-credit">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <div class="diagram-title">Confusion Matrix Analysis</div>
+                    <div class="diagram-description">
+                        Typical confusion matrix showing **True Positives** (falls detected), **False Positives** (sit-downs misclassified), **True Negatives** (normal activities), and **False Negatives** (missed falls).
+                    </div>
+                </div>
+
+                <h3>Performance Targets</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--blue); margin-bottom: 1rem;">🎯 Accuracy Targets</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem;">
+                            <li><strong>Precision ≥ 90%</strong> (low false alarms)</li>
+                            <li><strong>Recall ≥ 95%</strong> (catch real falls)</li>
+                            <li><strong>Specificity ≥ 95%</strong> (avoid sit-down confusion)</li>
+                            <li><strong>F1-Score ≥ 92%</strong> (balanced performance)</li>
+                        </ul>
+                    </div>
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: var(--secondary-text); margin-bottom: 1rem;">⚡ Latency Breakdown</h4>
+                        <ul style="margin: 0; padding-left: 1.5rem;">
+                            <li><strong>Pose Estimation:</strong> <strong>33-50 ms</strong></li>
+                            <li><strong>Rule Logic:</strong> <strong>&lt;5 ms</strong></li>
+                            <li><strong>SMS Alert:</strong> <strong>2-10 seconds</strong></li>
+                            <li><strong>Total Response:</strong> <strong>&lt;100 ms</strong></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Real-World Performance</h3>
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem; margin: 2rem 0;">
+                    <h4 style="color: var(--blue); margin-bottom: 1rem;">📊 Benchmark Results</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--blue);"><strong>91.6%</strong></div>
+                            <div style="font-size: 0.9rem; color: var(--muted);">Rule-based Accuracy</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--blue);"><strong>95.2%</strong></div>
+                            <div style="font-size: 0.9rem; color: var(--muted);">LSTM Accuracy</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-text);"><strong>25 ms</strong></div>
+                            <div style="font-size: 0.9rem; color: var(--muted);">Processing Time</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: var(--secondary-text);"><strong>100%</strong></div>
+                            <div style="font-size: 0.9rem; color: var(--muted);">Recall Target</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="position: relative; display: inline-block; width: 100%; text-align: center;">
+                    <img src="images/05_emergency_workflow.png" alt="Emergency workflow diagram" style="width: 100%; max-width: 700px; height: auto; border-radius: 16px; margin: 2rem auto; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.1);" loading="lazy">
+                    <div class="image-credit" style="position: absolute; top: 24px; right: calc(50% - 350px + 12px);">
+                        AI
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                </div>
+                <div class="image-caption" style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--muted);">Post-detection flow: human confirmation prompt and emergency alert escalation</div>
+            </div>
+        </div>
+
+        <!-- UX & Safety -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>UX & Safety</h2>
+                <p>User experience following fall detection prioritizes clear communication and fail-safe operation:</p>
+
+                <h3>UX Flow</h3>
+                <ul>
+                    <li>Show 10–15 s countdown with CANCEL button</li>
+                    <li>TTS prompt: "Fall detected! Press CANCEL if you're okay"</li>
+                    <li>Strong vibration pattern to get attention</li>
+                </ul>
+
+                <h3>Emergency Response</h3>
+                <p>If no cancel → <strong>SmsManager</strong> sends SMS with <strong>GPS coordinates</strong></p>
+
+                <h3>Safety Features</h3>
+                <ul>
+                    <li>Rate-limit alerts to ≥5 min apart</li>
+                    <li>Local logging only (no cloud upload)</li>
+                    <li>Process frames in real-time without storage</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- When to Apply -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>When to Apply Each Approach</h2>
+                <p>Guidance for selecting the optimal fall detection approach based on deployment constraints, accuracy requirements, and computational resources.</p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 2rem 0;">
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 2rem;">
+                        <h3 style="color: var(--blue); margin-bottom: 1rem;">🚀 Rule-based FSM</h3>
+                        <p style="margin-bottom: 1rem;"><strong>Best for:</strong> Mid-range phones, battery-sensitive deployments</p>
+                        <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">
+                            <li><strong>Consumer smartphones</strong> with limited processing power</li>
+                            <li><strong>24/7 monitoring</strong> where battery life is critical</li>
+                            <li><strong>Interpretable systems</strong> requiring explainable decisions</li>
+                            <li><strong>Real-time applications</strong> needing <strong>&lt;100 ms</strong> response</li>
+                            <li><strong>Prototype development</strong> with fast iteration cycles</li>
+                        </ul>
+                    </div>
+
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 2rem;">
+                        <h3 style="color: var(--secondary-text); margin-bottom: 1rem;">🧠 ML (LSTM/TCN)</h3>
+                        <p style="margin-bottom: 1rem;"><strong>Best for:</strong> Research, clinical trials with compute tolerance</p>
+                        <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">
+                            <li><strong>Clinical research</strong> requiring <strong>&gt;95% accuracy</strong></li>
+                            <li><strong>High-end devices</strong> with dedicated NPU/GPU</li>
+                            <li><strong>Personalized systems</strong> that adapt to user patterns</li>
+                            <li><strong>Complex scenarios</strong> with diverse fall types</li>
+                            <li><strong>Data-rich environments</strong> with training datasets</li>
+                        </ul>
+                    </div>
+
+                    <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 2rem;">
+                        <h3 style="color: var(--blue); margin-bottom: 1rem;">⚡ Hybrid Approach</h3>
+                        <p style="margin-bottom: 1rem;"><strong>Best for:</strong> Production systems balancing accuracy and efficiency</p>
+                        <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">
+                            <li><strong>Commercial products</strong> needing both speed and accuracy</li>
+                            <li><strong>Edge computing</strong> with limited but sufficient resources</li>
+                            <li><strong>Tiered processing</strong> (rules filter → ML re-score)</li>
+                            <li><strong>Adaptive systems</strong> that learn from false positives</li>
+                            <li><strong>Enterprise deployments</strong> with mixed device capabilities</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 1.5rem; margin: 2rem 0;">
+                    <h4 style="color: var(--blue); margin-bottom: 1rem;">🎯 Decision Matrix</h4>
+                    <p><strong>High Accuracy Required + High Compute Available</strong> → <strong>LSTM/TCN</strong></p>
+                    <p><strong>Real-time Critical + Battery Sensitive</strong> → <strong>Rule-based FSM</strong></p>
+                    <p><strong>Balanced Requirements + Production Ready</strong> → <strong>Hybrid Approach</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Quiz -->
+        <div class="quiz-section">
+            <h2 class="quiz-title">"Fall or Not?"</h2>
+            <p style="text-align: center; font-size: 1.125rem; color: var(--secondary-text); margin-bottom: 2rem;">
+                Test your understanding by analyzing these scenarios.
+            </p>
+
+            <div class="quiz-grid">
+                <!-- Quiz Card 1 -->
+                <div class="quiz-card">
+                    <div style="position: relative;">
+                        <img src="images/fall1.png" alt="Rapid descent sequence" class="quiz-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1rem;" loading="lazy">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                    </div>
+                    <div class="quiz-caption">
+                        Person shows rapid downward motion, torso angle increases to <strong>75°</strong>, followed by stillness.
+                    </div>
+                    <div class="quiz-buttons">
+                        <button class="quiz-btn" onclick="answerQuiz(0, 'fall')" data-answer="fall">Fall</button>
+                        <button class="quiz-btn" onclick="answerQuiz(0, 'not-fall')" data-answer="not-fall">Not Fall</button>
+                    </div>
+                    <div class="quiz-feedback" id="feedback-0"></div>
+                </div>
+
+                <!-- Quiz Card 2 -->
+                <div class="quiz-card">
+                    <div style="position: relative;">
+                        <img src="images/sit1.png" alt="Controlled sitting motion" class="quiz-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1rem;" loading="lazy">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                    </div>
+                    <div class="quiz-caption">
+                        Person descends quickly but torso angle only reaches <strong>45°</strong>, with continuous controlled motion.
+                    </div>
+                    <div class="quiz-buttons">
+                        <button class="quiz-btn" onclick="answerQuiz(1, 'fall')" data-answer="fall">Fall</button>
+                        <button class="quiz-btn" onclick="answerQuiz(1, 'not-fall')" data-answer="not-fall">Not Fall</button>
+                    </div>
+                    <div class="quiz-feedback" id="feedback-1"></div>
+                </div>
+
+                <!-- Quiz Card 3 -->
+                <div class="quiz-card">
+                    <div style="position: relative;">
+                        <img src="images/trip1.png" alt="Stumble with recovery" class="quiz-image" style="width: 100%; height: 200px; object-fit: contain; border-radius: 12px; background: #f8f9fa; margin-bottom: 1rem;" loading="lazy">
+                        <div class="image-credit">
+                            AI
+                            <div class="credit-popup">Generated by Gemini</div>
+                        </div>
+                    </div>
+                    <div class="quiz-caption">
+                        Person stumbles with brief descent and <strong>50°</strong> tilt, but quickly recovers balance.
+                    </div>
+                    <div class="quiz-buttons">
+                        <button class="quiz-btn" onclick="answerQuiz(2, 'fall')" data-answer="fall">Fall</button>
+                        <button class="quiz-btn" onclick="answerQuiz(2, 'not-fall')" data-answer="not-fall">Not Fall</button>
+                    </div>
+                    <div class="quiz-feedback" id="feedback-2"></div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Code Modal -->
+    <div class="code-modal-overlay" id="codeModalOverlay" onclick="closeCodeModal()">
+        <div class="code-modal" onclick="event.stopPropagation()">
+            <div class="code-modal-header">
+                <h3 id="codeModalTitle">Implementation Code</h3>
+                <button class="code-modal-close" onclick="closeCodeModal()">×</button>
+            </div>
+            <div class="code-modal-content" id="codeModalContent">
+                <!-- Code content will be inserted here -->
+            </div>
+            <div class="code-modal-footer">
+                <button class="copy-code-btn" onclick="copyModalCode()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                    </svg>
+                    Copy Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sticky Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-buttons">
+            <a href="posture.html" class="btn-secondary">
+                ← Back: Posture Detection
+            </a>
+            <a href="emergency.html" class="btn-primary disabled" id="nextTutorialBtn">
+                <span id="nextBtnText">Scroll to unlock next tutorial →</span>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        <p>CS663 Computer Vision | Fall 2025</p>
+        <a href="#" class="back-to-top">Back to Top</a>
+    </footer>
+
+    <script>
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all section cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.section-card');
+            cards.forEach(card => observer.observe(card));
+        });
+
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+        }
+
+        // Reset when audio ends
+        document.getElementById('pageAudio').addEventListener('ended', function() {
+            const button = document.querySelector('.audio-button');
+            button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            isPlaying = false;
+        });
+
+        // Code Modal Functions
+        const codeImplementations = {
+            kotlin: {
+                title: 'Kotlin Implementation (Android)',
+                code: `enum class FallState {
+    IDLE, DESCENT, HORIZONTAL, FALL_CONFIRMED
+}
+
+class FallDetector {
+    private var currentState = FallState.IDLE
+    private var stateTimer = 0
+    private val velocityThreshold = -0.3f
+    private val tiltThreshold = 65f
+    private val stillnessThreshold = 0.02f
+
+    fun processFrame(keypoints: Array<Keypoint>): FallState {
+        val velocity = calculateVerticalVelocity(keypoints)
+        val tiltAngle = calculateTiltAngle(keypoints)
+        val motionMag = calculateMotionMagnitude(keypoints)
+
+        when (currentState) {
+            FallState.IDLE -> {
+                if (velocity < velocityThreshold) {
+                    currentState = FallState.DESCENT
+                    stateTimer = 0
+                }
+            }
+
+            FallState.DESCENT -> {
+                stateTimer++
+                if (tiltAngle >= tiltThreshold) {
+                    currentState = FallState.HORIZONTAL
+                    stateTimer = 0
+                } else if (velocity >= velocityThreshold || stateTimer > 150) {
+                    currentState = FallState.IDLE
+                    stateTimer = 0
+                }
+            }
+
+            FallState.HORIZONTAL -> {
+                stateTimer++
+                if (motionMag <= stillnessThreshold && stateTimer >= 300) {
+                    currentState = FallState.FALL_CONFIRMED
+                    triggerEmergencyAlert()
+                } else if (tiltAngle < tiltThreshold || stateTimer > 600) {
+                    currentState = FallState.IDLE
+                    stateTimer = 0
+                }
+            }
+
+            FallState.FALL_CONFIRMED -> {
+                // Handle emergency state
+                if (stateTimer > 900) { // 30 seconds at 30 FPS
+                    currentState = FallState.IDLE
+                    stateTimer = 0
+                }
+            }
+        }
+
+        return currentState
+    }
+
+    private fun calculateVerticalVelocity(keypoints: Array<Keypoint>): Float {
+        val hipY = (keypoints[11].y + keypoints[12].y) / 2f
+        val prevHipY = previousHipY ?: hipY
+        previousHipY = hipY
+        return (hipY - prevHipY) / (1f / 30f) // 30 FPS
+    }
+
+    private fun calculateTiltAngle(keypoints: Array<Keypoint>): Float {
+        val neck = keypoints[0]
+        val midHip = PointF(
+            (keypoints[11].x + keypoints[12].x) / 2f,
+            (keypoints[11].y + keypoints[12].y) / 2f
+        )
+        val torsoVector = PointF(neck.x - midHip.x, neck.y - midHip.y)
+        return Math.toDegrees(atan2(torsoVector.x.toDouble(), -torsoVector.y.toDouble())).toFloat()
+    }
+
+    private fun triggerEmergencyAlert() {
+        // Implement emergency alert logic
+        Log.d("FallDetector", "FALL DETECTED - Triggering emergency alert")
+    }
+}`
+            },
+            python: {
+                title: 'Python Reference (Testing)',
+                code: `import numpy as np
+from enum import Enum
+import math
+
+class FallState(Enum):
+    IDLE = "idle"
+    DESCENT = "descent"
+    HORIZONTAL = "horizontal"
+    FALL_CONFIRMED = "fall_confirmed"
+
+class FallDetector:
+    def __init__(self):
+        self.current_state = FallState.IDLE
+        self.state_timer = 0
+        self.velocity_threshold = -0.3
+        self.tilt_threshold = 65
+        self.stillness_threshold = 0.02
+        self.previous_hip_y = None
+
+    def process_frame(self, keypoints):
+        """
+        Process a frame of keypoints and update fall detection state
+        keypoints: numpy array of shape (17, 2) for COCO format
+        """
+        velocity = self._calculate_vertical_velocity(keypoints)
+        tilt_angle = self._calculate_tilt_angle(keypoints)
+        motion_mag = self._calculate_motion_magnitude(keypoints)
+
+        if self.current_state == FallState.IDLE:
+            if velocity < self.velocity_threshold:
+                self.current_state = FallState.DESCENT
+                self.state_timer = 0
+
+        elif self.current_state == FallState.DESCENT:
+            self.state_timer += 1
+            if tilt_angle >= self.tilt_threshold:
+                self.current_state = FallState.HORIZONTAL
+                self.state_timer = 0
+            elif velocity >= self.velocity_threshold or self.state_timer > 150:
+                self.current_state = FallState.IDLE
+                self.state_timer = 0
+
+        elif self.current_state == FallState.HORIZONTAL:
+            self.state_timer += 1
+            if motion_mag <= self.stillness_threshold and self.state_timer >= 300:
+                self.current_state = FallState.FALL_CONFIRMED
+                self._trigger_emergency_alert()
+            elif tilt_angle < self.tilt_threshold or self.state_timer > 600:
+                self.current_state = FallState.IDLE
+                self.state_timer = 0
+
+        elif self.current_state == FallState.FALL_CONFIRMED:
+            self.state_timer += 1
+            if self.state_timer > 900:  # 30 seconds at 30 FPS
+                self.current_state = FallState.IDLE
+                self.state_timer = 0
+
+        return self.current_state
+
+    def _calculate_vertical_velocity(self, keypoints):
+        """Calculate vertical velocity of hip center"""
+        left_hip = keypoints[11]  # COCO format
+        right_hip = keypoints[12]
+        hip_y = (left_hip[1] + right_hip[1]) / 2
+
+        if self.previous_hip_y is None:
+            self.previous_hip_y = hip_y
+            return 0
+
+        velocity = (hip_y - self.previous_hip_y) / (1/30)  # 30 FPS
+        self.previous_hip_y = hip_y
+        return velocity
+
+    def _calculate_tilt_angle(self, keypoints):
+        """Calculate torso tilt angle from vertical"""
+        neck = keypoints[0]  # COCO neck/nose
+        left_hip = keypoints[11]
+        right_hip = keypoints[12]
+
+        mid_hip = np.array([(left_hip[0] + right_hip[0]) / 2,
+                           (left_hip[1] + right_hip[1]) / 2])
+
+        torso_vector = neck - mid_hip
+        angle_rad = math.atan2(torso_vector[0], -torso_vector[1])
+        angle_deg = math.degrees(angle_rad)
+
+        return abs(angle_deg)
+
+    def _calculate_motion_magnitude(self, keypoints):
+        """Calculate overall motion magnitude"""
+        if not hasattr(self, 'previous_keypoints'):
+            self.previous_keypoints = keypoints
+            return 0
+
+        motion = np.mean(np.linalg.norm(keypoints - self.previous_keypoints, axis=1))
+        self.previous_keypoints = keypoints
+        return motion
+
+    def _trigger_emergency_alert(self):
+        """Trigger emergency alert"""
+        print("🚨 FALL DETECTED - Emergency alert triggered!")
+
+# Usage example:
+detector = FallDetector()
+# keypoints = load_keypoints_from_frame()
+# state = detector.process_frame(keypoints)`
+            }
+        };
+
+        function openCodeModal(type) {
+            const modal = document.getElementById('codeModalOverlay');
+            const title = document.getElementById('codeModalTitle');
+            const content = document.getElementById('codeModalContent');
+
+            const implementation = codeImplementations[type];
+            title.textContent = implementation.title;
+            content.innerHTML = '<div class="code-block-modal">' + implementation.code + '</div>';
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCodeModal() {
+            const modal = document.getElementById('codeModalOverlay');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function copyModalCode() {
+            const codeBlock = document.querySelector('.code-block-modal');
+            const text = codeBlock.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.copy-code-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Copied!';
+                btn.style.background = '#34c759';
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#0071e3';
+                }, 2000);
+            });
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCodeModal();
+            }
+        });
+
+        // Quiz functionality
+        const quizAnswers = {
+            0: 'fall',    // Rapid descent + horizontal + stillness = Fall
+            1: 'not-fall', // Controlled sitting, angle only 45° = Not a Fall
+            2: 'not-fall'  // Recovery, no sustained stillness = Not a Fall
+        };
+
+        const quizFeedback = {
+            0: {
+                correct: "Correct! This shows all three fall criteria: rapid descent + horizontal orientation (75° > 65°) + stillness.",
+                incorrect: "Not quite. Notice the sequence: rapid descent + horizontal posture (75°) + sustained stillness. All three conditions indicate a fall event."
+            },
+            1: {
+                correct: "Correct! Although there's rapid descent, the torso angle only reaches 45° (below the 65° threshold) and motion continues.",
+                incorrect: "Not quite. While there's descent, the torso never becomes horizontal (only 45° vs 65° threshold) and there's no stillness period."
+            },
+            2: {
+                correct: "Correct! Despite the stumble and brief tilt, the person recovers quickly without sustained stillness.",
+                incorrect: "Not quite. Although there's a stumble, notice the quick recovery and continued motion. No sustained stillness occurs."
+            }
+        };
+
+        function answerQuiz(cardIndex, userAnswer) {
+            const correctAnswer = quizAnswers[cardIndex];
+            const isCorrect = userAnswer === correctAnswer;
+
+            // Update button styles
+            const card = document.querySelectorAll('.quiz-card')[cardIndex];
+            const buttons = card.querySelectorAll('.quiz-btn');
+            const feedback = document.getElementById(`feedback-${cardIndex}`);
+
+            buttons.forEach(btn => {
+                const btnAnswer = btn.getAttribute('data-answer');
+                if (btnAnswer === correctAnswer) {
+                    btn.classList.add('correct');
+                } else if (btnAnswer === userAnswer && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+                btn.disabled = true;
+            });
+
+            // Show feedback
+            feedback.style.display = 'block';
+            feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.textContent = isCorrect ?
+                quizFeedback[cardIndex].correct :
+                quizFeedback[cardIndex].incorrect;
+        }
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling.textContent;
+            navigator.clipboard.writeText(codeBlock).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+
+        // Carousel functionality for 3-Stage Logic
+        let currentStage = 0;
+        const totalStages = 3;
+
+        function updateCarousel() {
+            const track = document.getElementById('stageCarouselTrack');
+            const cards = track.querySelectorAll('.carousel-card');
+            const dots = document.querySelectorAll('.carousel-dots .dot');
+
+            // Update track position
+            const offset = -currentStage * (400 + 32); // card width + gap
+            track.style.transform = `translateX(${offset}px)`;
+
+            // Update card states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentStage);
+            });
+
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentStage);
+            });
+        }
+
+        function nextStage() {
+            currentStage = (currentStage + 1) % totalStages;
+            updateCarousel();
+        }
+
+        function previousStage() {
+            currentStage = (currentStage - 1 + totalStages) % totalStages;
+            updateCarousel();
+        }
+
+        function goToStage(index) {
+            currentStage = index;
+            updateCarousel();
+        }
+
+        // Collapsible code sections
+        function toggleCode(index) {
+            const toggle = document.querySelector(`.code-toggle:nth-of-type(${index + 1})`);
+            const content = document.getElementById(`code-content-${index}`);
+            const icon = toggle.querySelector('.code-toggle-icon');
+
+            const isActive = content.classList.contains('active');
+
+            if (isActive) {
+                content.classList.remove('active');
+                toggle.classList.remove('active');
+                icon.textContent = '▼';
+            } else {
+                content.classList.add('active');
+                toggle.classList.add('active');
+                icon.textContent = '▲';
+            }
+        }
+
+        // Smooth scroll for back to top
+        document.querySelector('.back-to-top').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+
+
+        // Scroll-based bottom navigation and tutorial button
+        let nextTutorialUnlocked = false;
+        let bottomNavVisible = false;
+        function checkScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercentage = (scrollTop / documentHeight) * 100;
+            const bottomNav = document.querySelector('.bottom-nav');
+            const nextBtn = document.getElementById('nextTutorialBtn');
+            const btnText = document.getElementById('nextBtnText');
+
+            if (scrollPercentage >= 95 && !bottomNavVisible) {
+                bottomNavVisible = true;
+                bottomNav.classList.add('visible');
+            } else if (scrollPercentage < 95 && bottomNavVisible) {
+                bottomNavVisible = false;
+                bottomNav.classList.remove('visible');
+            }
+
+            if (scrollPercentage >= 97 && !nextTutorialUnlocked) {
+                nextTutorialUnlocked = true;
+                nextBtn.classList.remove('disabled');
+                btnText.textContent = 'Next: Emergency Workflow →';
+                nextBtn.style.animation = 'pulse 2s infinite';
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }
+        }
+        window.addEventListener('scroll', checkScrollProgress);
+        if (!document.querySelector('#pulseAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pulseAnimation';
+            style.textContent = `@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>

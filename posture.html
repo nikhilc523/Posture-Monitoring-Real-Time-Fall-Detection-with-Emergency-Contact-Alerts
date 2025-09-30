@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posture Detection - CS663 Computer Vision</title>
+    <style>
+        /* CSS Variables */
+        :root {
+            --blue: #0071e3;
+            --text: #1d1d1f;
+            --secondary-text: #515154;
+            --muted: #86868b;
+            --bg: #fff;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            --border: #e9eef5;
+            --gradient-start: #f9fafc;
+            --gradient-end: #fff;
+            --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(249,250,252,0.8) 100%);
+            --glass-bg: rgba(255,255,255,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            height: 100%;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--blue);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: var(--text);
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1001;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Image Credits */
+        .image-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .image-placeholder {
+            position: relative;
+        }
+
+        .card-image {
+            position: relative;
+        }
+
+        .intro-section {
+            position: relative;
+        }
+
+        .quiz-image {
+            position: relative;
+        }
+
+        .image-credit {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(0, 113, 227, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--blue);
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-credit:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
+            border-color: var(--blue);
+        }
+
+        .credit-popup {
+            position: absolute;
+            bottom: 40px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.92);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 150;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-credit:hover .credit-popup {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 997;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background: #e5e5e7;
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 1.5s ease-out;
+        }
+
+        /* Intro Section */
+        .intro-section {
+            padding: 180px 2rem 80px;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .intro-section h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .intro-section .subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .intro-section .description {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 3rem;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.4s ease;
+        }
+
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.15);
+        }
+
+        .card-content {
+            padding: 3rem;
+        }
+
+        .card-content h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .card-content p {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .card-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-content li {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .card-content li::before {
+            content: "•";
+            color: var(--blue);
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: -0.1rem;
+        }
+
+        /* Image Placeholders */
+        .image-placeholder {
+            width: 100%;
+            height: 300px;
+            background: #f5f5f7;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 1rem;
+            text-align: center;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .image-caption {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-top: 1rem;
+            font-style: italic;
+        }
+
+        /* Citations */
+        a[href^="bibliography.html"] {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 0.1rem;
+        }
+
+        a[href^="bibliography.html"]:hover {
+            text-decoration: underline;
+        }
+
+        /* Highlight Spans */
+        .highlight, strong {
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* Math Chip */
+        .math-chip {
+            background: #f5f5f7;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--text);
+            display: inline-block;
+            margin: 0.5rem 0;
+        }
+
+        /* Carousel Section */
+        .carousel-section {
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .carousel-container {
+            position: relative;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 4rem;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            gap: 2rem;
+        }
+
+        .carousel-card {
+            flex: 0 0 400px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .carousel-card.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .carousel-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        .card-summary {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .card-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Carousel Navigation */
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .carousel-nav:hover {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-nav.prev {
+            left: 1rem;
+        }
+
+        .carousel-nav.next {
+            right: 1rem;
+        }
+
+        /* Progress Dots */
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--blue);
+            transform: scale(1.2);
+        }
+
+        .dot:hover {
+            background: var(--blue);
+            opacity: 0.7;
+        }
+
+        /* Two-column grid */
+        .two-column-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .column-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .column-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: #fff;
+            margin-bottom: 1rem;
+        }
+
+        .column-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .column-card p {
+            font-size: 0.95rem;
+            color: var(--secondary-text);
+            line-height: 1.4;
+        }
+
+        /* Quiz Section */
+        .quiz-section {
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .quiz-title {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .quiz-subtitle {
+            text-align: center;
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 3rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .quiz-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+            opacity: 1;
+        }
+
+        .quiz-card.poor-posture {
+            background: #f5f5f7;
+            border-color: #e0e0e0;
+        }
+
+        .quiz-card.good-posture {
+            background: #f0f9ff;
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .quiz-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .quiz-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .quiz-caption {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .quiz-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .quiz-btn {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border: 2px solid var(--blue);
+            border-radius: 25px;
+            background: white;
+            color: var(--blue);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            position: relative;
+        }
+
+        .quiz-btn:hover:not(:disabled) {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        .quiz-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .quiz-btn.correct {
+            background: #34c759;
+            border-color: #34c759;
+            color: white;
+            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+        }
+
+        .quiz-btn.incorrect {
+            background: #ff3b30;
+            border-color: #ff3b30;
+            color: white;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+        }
+
+        .quiz-btn.correct::after {
+            content: "✓";
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+
+        .quiz-btn.incorrect::after {
+            content: "✗";
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+
+        .quiz-feedback {
+            margin-top: 1rem;
+            padding: 1.25rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            display: none;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-feedback.show {
+            display: block;
+            animation: fadeInUp 0.4s ease;
+        }
+
+        .quiz-feedback.correct {
+            background: rgba(52, 199, 89, 0.1);
+            color: #1d4ed8;
+            border: 1px solid rgba(52, 199, 89, 0.3);
+        }
+
+        .quiz-feedback.incorrect {
+            background: rgba(255, 59, 48, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(255, 59, 48, 0.3);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Audio Section */
+        .audio-section {
+            background: #f5f5f7;
+            border-radius: 18px;
+            padding: 2rem;
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .audio-section audio {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 1rem;
+        }
+
+        /* Bottom Sticky Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 113, 227, 0.1);
+            padding: 1.5rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .bottom-nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 1rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0062c8;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-primary.disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .btn-primary.disabled:hover {
+            background: #ccc;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--blue);
+            border: 1px solid rgba(0, 113, 227, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem 8rem;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            margin-top: 6rem;
+        }
+
+        footer p {
+            margin-bottom: 1rem;
+        }
+
+        .back-to-top {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-to-top:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .intro-section {
+                padding: 160px 1rem 60px;
+            }
+
+            .card-content {
+                padding: 2rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .bottom-nav {
+                padding: 1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .two-column-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .quiz-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 0 1rem;
+            }
+
+            .quiz-card {
+                padding: 1.5rem;
+            }
+
+            .quiz-buttons {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .quiz-btn {
+                padding: 1rem 1.5rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html">Sensors</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="posture.html" class="active">Posture</a></li>
+                <li><a href="falllogic.html">Fall Logic</a></li>
+                <li><a href="emergency.html">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">6 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/posture.mp3" preload="metadata"></audio>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-text">Step 4 of 8: Posture Detection</div>
+        <div class="progress-bar">
+            <div class="progress-fill" data-progress="40"></div>
+        </div>
+    </div>
+
+    <!-- Intro Section -->
+    <section class="intro-section">
+        <h1>Detecting Slouching & Poor Posture</h1>
+        <p class="description">Posture monitoring is critical for seniors as it affects balance and fall risk. On-device pose models like BlazePose (33 landmarks) and MoveNet (17 keypoints) measure body alignment in real time <a href="bibliography.html#ref-1">[1]</a><a href="bibliography.html#ref-2">[2]</a>. Newer families like YOLO-Pose and RTMPose are also applicable <a href="bibliography.html#ref-3">[3]</a><a href="bibliography.html#ref-4">[4]</a>.</p>
+
+        <div style="position: relative; display: inline-block; width: 100%; max-width: 800px; margin: 2rem auto;">
+            <img src="images/posture-hero.png" alt="Complete posture detection pipeline from camera to angle measurements" style="width: 100%; height: auto; border-radius: 16px; display: block; box-shadow: 0 8px 32px rgba(0,0,0,0.1);" loading="lazy">
+            <div class="image-credit">
+                <span>AI</span>
+                <div class="credit-popup">Generated by Gemini</div>
+            </div>
+        </div>
+        <div class="image-caption">From camera frame to posture angles on-device.</div>
+    </section>
+
+    <div class="container">
+        <!-- Why Posture Matters -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Why Posture Matters for Seniors</h2>
+                <p>Posture monitoring is critical for seniors as it directly affects balance and fall risk. Forward lean shifts the center-of-mass, reducing stability and increasing the likelihood of falls. Poor posture leads to balance degradation, compromised mobility, and chronic pain that reduces confidence in movement.</p>
+
+                <p>Posture cues help disambiguate fall events from normal activities <a href="bibliography.html#ref-1">[1]</a><a href="bibliography.html#ref-2">[2]</a>. Unlike wearable-only signals that provide limited context, visual alignment analysis offers comprehensive postural assessment <a href="bibliography.html#ref-5">[5]</a>.</p>
+
+                <div class="image-placeholder">
+                    <img src="images/posture-cog.png" alt="Forward lean moves center of mass" style="width: 100%; height: 100%; object-fit: contain; border-radius: 16px;">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                </div>
+                <div class="image-caption">Forward lean moves the center of mass, reducing stability.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Analysis Carousel -->
+    <section class="carousel-section">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 2rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">Technical Analysis Components</h2>
+            <p style="text-align: center; font-size: 1.125rem; color: var(--secondary-text); margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">Essential landmarks include head, neck, shoulders, hips, and knees. We compute the torso vector (neck ↔ mid-hip), head tilt, and knee/hip angles for comprehensive posture analysis using various pose estimation models.</p>
+        </div>
+
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- Card 1: Key Landmarks -->
+                    <div class="carousel-card active">
+                        <div class="card-image">
+                            <img src="images/posture-keypoints.png" alt="Posture detection landmarks" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Key Landmarks <a href="bibliography.html#ref-1">[1]</a><a href="bibliography.html#ref-2">[2]</a></h3>
+                        <p class="card-summary">Essential landmarks: head, neck, shoulders, hips, knees. Compute torso vector and angles.</p>
+                        <ul class="card-features">
+                            <li>• <strong>BlazePose:</strong> 33 landmarks, richer torso detail</li>
+                            <li>• <strong>MoveNet:</strong> 17 keypoints, lighter processing</li>
+                            <li>• <strong>YOLO-Pose:</strong> Multi-person robust scenes <a href="bibliography.html#ref-3">[3]</a></li>
+                            <li>• <strong>RTMPose:</strong> Modern speed/accuracy balance <a href="bibliography.html#ref-4">[4]</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 2: Angle Metrics -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/posture-angles.png" alt="Neck and torso angle measurements" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Angle-Based Metrics</h3>
+                        <p class="card-summary">Neck angle (shoulder→neck) and torso angle (hip→neck) relative to vertical.</p>
+                        <ul class="card-features">
+                            <li>• <strong>Formula:</strong> θ = arctan((y₂ − y₁) / (x₂ − x₁))</li>
+                            <li>• <strong>Upright:</strong> 0–10° (normal posture)</li>
+                            <li>• <strong>Mild slouch:</strong> 10–20° (gentle reminder)</li>
+                            <li>• <strong>Severe slouch:</strong> >20° (coaching alert)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 3: Temporal Smoothing -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/posture-smoothing.png" alt="Raw vs smoothed angle data" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Temporal Smoothing <a href="bibliography.html#ref-1">[1]</a></h3>
+                        <p class="card-summary">EMA filtering reduces jitter. LSTM models adapt for posture trend analysis.</p>
+                        <ul class="card-features">
+                            <li>• <strong>EMA:</strong> smoothed = α × raw + (1-α) × prev</li>
+                            <li>• Reduces pose estimation noise and jitter</li>
+                            <li>• Kalman filtering for more complex scenarios</li>
+                            <li>• LSTM models for temporal posture patterns</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToCard(0)"></div>
+                <div class="dot" onclick="goToCard(1)"></div>
+                <div class="dot" onclick="goToCard(2)"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Application & UX Carousel -->
+    <section class="carousel-section">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 2rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">Application & User Experience</h2>
+            <p style="text-align: center; font-size: 1.125rem; color: var(--secondary-text); margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">Different posture analysis approaches for various positions and gentle coaching systems that provide supportive feedback without causing alarm fatigue.</p>
+        </div>
+
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousCard2()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextCard2()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack2">
+                    <!-- Card 1: Seated vs Standing -->
+                    <div class="carousel-card active">
+                        <div class="card-image">
+                            <img src="images/posture-standing.png" alt="Standing vs seated posture analysis" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Seated vs Standing Analysis</h3>
+                        <p class="card-summary">Different analysis approaches based on hip-knee-ankle relationships and position detection.</p>
+                        <ul class="card-features">
+                            <li>• <strong>Standing:</strong> Hips above knees, torso near vertical</li>
+                            <li>• <strong>Seated:</strong> Hips ≈ knees height, monitor torso tilt</li>
+                            <li>• Use normalized heights for position detection</li>
+                            <li>• Hip-knee-ankle distance ratios as indicators</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 2: Gentle Coaching -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/posture-feedback-ui.png" alt="Gentle coaching interface" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Gentle Coaching <a href="bibliography.html#ref-6">[6]</a></h3>
+                        <p class="card-summary">Supportive feedback system with visual, audio, and haptic cues that avoids alarm fatigue.</p>
+                        <ul class="card-features">
+                            <li>• Single vibration + "Please sit upright" voice prompt</li>
+                            <li>• Gradual escalation to avoid alarm fatigue</li>
+                            <li>• Privacy-first: no images/video transmitted</li>
+                            <li>• Integrates with emergency workflow system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToCard2(0)"></div>
+                <div class="dot" onclick="goToCard2(1)"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Model Choice Carousel -->
+    <section class="carousel-section">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 2rem; font-weight: 600; color: var(--text); margin-bottom: 1rem;">Model Choice for Posture (Practical Guidance)</h2>
+            <p style="text-align: center; font-size: 1.125rem; color: var(--secondary-text); margin-bottom: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">Selecting the right pose estimation model depends on your specific requirements for accuracy, speed, and deployment constraints. Each model family offers different trade-offs suitable for various posture monitoring scenarios.</p>
+        </div>
+
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousCard3()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextCard3()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack3">
+                    <!-- Card 1: MoveNet Lightning -->
+                    <div class="carousel-card active">
+                        <div class="card-image">
+                            <img src="images/movenet-posture.png" alt="MoveNet Lightning for posture monitoring" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">MoveNet Lightning <a href="bibliography.html#ref-2">[2]</a></h3>
+                        <p class="card-summary"><strong>Best for:</strong> Continuous posture hints with high frame rates and battery-sensitive applications.</p>
+                        <ul class="card-features">
+                            <li>• Delivers 30-60 FPS on mobile devices with minimal battery drain</li>
+                            <li>• 17 keypoints provide sufficient detail for basic posture assessment</li>
+                            <li>• Optimized for real-time monitoring throughout the day</li>
+                            <li>• Ideal for general wellness applications and continuous background monitoring</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 2: BlazePose -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/blazepose-posture.png" alt="BlazePose for detailed posture analysis" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">BlazePose <a href="bibliography.html#ref-1">[1]</a></h3>
+                        <p class="card-summary"><strong>Best for:</strong> Detailed spine and torso analysis in medical or clinical applications.</p>
+                        <ul class="card-features">
+                            <li>• 33 landmarks provide rich torso detail for precise posture analysis</li>
+                            <li>• Pseudo-3D coordinates enable more sophisticated angle calculations</li>
+                            <li>• Superior for detecting subtle postural changes and spinal alignment</li>
+                            <li>• Recommended for healthcare applications requiring clinical accuracy</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 3: YOLO-Pose -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/yolopose-posture.png" alt="YOLO-Pose for multi-person posture monitoring" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">YOLO-Pose <a href="bibliography.html#ref-3">[3]</a></h3>
+                        <p class="card-summary"><strong>Best for:</strong> Multi-person environments and cluttered scenes.</p>
+                        <ul class="card-features">
+                            <li>• Unified object detection and pose estimation architecture</li>
+                            <li>• Robust performance in complex environments with multiple people</li>
+                            <li>• Excellent for smart home monitoring systems</li>
+                            <li>• Handles occlusion and crowded scenes better than single-person models</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 4: RTMPose -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/rtmpose-posture.png" alt="RTMPose for balanced posture monitoring" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">RTMPose <a href="bibliography.html#ref-4">[4]</a></h3>
+                        <p class="card-summary"><strong>Best for:</strong> Modern applications requiring balanced speed and accuracy.</p>
+                        <ul class="card-features">
+                            <li>• State-of-the-art efficiency with modern architectural improvements</li>
+                            <li>• Configurable keypoint sets (17-133 points) for different use cases</li>
+                            <li>• Balanced performance suitable for next-generation applications</li>
+                            <li>• Good choice for new deployments seeking optimal trade-offs</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 5: Summary & Comparison -->
+                    <div class="carousel-card">
+                        <div class="card-image">
+                            <img src="images/posture-models-compare.png" alt="Model comparison for posture monitoring" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">Summary & Integration</h3>
+                        <p class="card-summary">Comprehensive comparison and integration guidance for posture monitoring systems.</p>
+                        <ul class="card-features">
+                            <li>• <strong>Speed:</strong> MoveNet > RTMPose > YOLO-Pose > BlazePose</li>
+                            <li>• <strong>Detail:</strong> BlazePose > RTMPose > YOLO-Pose > MoveNet</li>
+                            <li>• <strong>Multi-person:</strong> YOLO-Pose > RTMPose > BlazePose > MoveNet</li>
+                            <li>• <strong>Note:</strong> Wearables complement but don't replace visual analysis <a href="bibliography.html#ref-5">[5]</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToCard3(0)"></div>
+                <div class="dot" onclick="goToCard3(1)"></div>
+                <div class="dot" onclick="goToCard3(2)"></div>
+                <div class="dot" onclick="goToCard3(3)"></div>
+                <div class="dot" onclick="goToCard3(4)"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Interactive Quiz -->
+        <div class="quiz-section">
+            <div class="container">
+                <h2 class="quiz-title">Quick Posture Assessment</h2>
+                <p class="quiz-subtitle">
+                    Test your understanding of posture detection by analyzing these scenarios. Click your answer to see if you're correct!
+                </p>
+
+                <div class="quiz-grid">
+                    <!-- Quiz Card 1 - Poor Posture -->
+                    <div class="quiz-card poor-posture" id="quiz-card-0">
+                        <div class="quiz-image">
+                            <img src="images/posture-quiz1.png" alt="Person with forward head posture showing poor posture" loading="lazy">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <div class="quiz-caption">
+                            <strong>Scenario 1:</strong><br>
+                            Neck angle: <span class="math-chip">25°</span> | Torso angle: <span class="math-chip">18°</span>
+                        </div>
+                        <div class="quiz-buttons">
+                            <button class="quiz-btn" onclick="answerQuiz(0, 'good')" data-answer="good" id="btn-0-good">
+                                Good Posture
+                            </button>
+                            <button class="quiz-btn" onclick="answerQuiz(0, 'poor')" data-answer="poor" id="btn-0-poor">
+                                Poor Posture
+                            </button>
+                        </div>
+                        <div class="quiz-feedback" id="feedback-0"></div>
+                    </div>
+
+                    <!-- Quiz Card 2 - Good Posture -->
+                    <div class="quiz-card good-posture" id="quiz-card-1">
+                        <div class="quiz-image">
+                            <img src="images/posture-quiz2.png" alt="Person with upright posture showing good posture" loading="lazy">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <div class="quiz-caption">
+                            <strong>Scenario 2:</strong><br>
+                            Neck angle: <span class="math-chip">8°</span> | Torso angle: <span class="math-chip">5°</span>
+                        </div>
+                        <div class="quiz-buttons">
+                            <button class="quiz-btn" onclick="answerQuiz(1, 'good')" data-answer="good" id="btn-1-good">
+                                Good Posture
+                            </button>
+                            <button class="quiz-btn" onclick="answerQuiz(1, 'poor')" data-answer="poor" id="btn-1-poor">
+                                Poor Posture
+                            </button>
+                        </div>
+                        <div class="quiz-feedback" id="feedback-1"></div>
+                    </div>
+
+                    <!-- Quiz Card 3 - Poor Posture (Mild) -->
+                    <div class="quiz-card poor-posture" id="quiz-card-2">
+                        <div class="quiz-image">
+                            <img src="images/posture-quiz3.png" alt="Person with mild slouching showing poor posture" loading="lazy">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <div class="quiz-caption">
+                            <strong>Scenario 3:</strong><br>
+                            Neck angle: <span class="math-chip">15°</span> | Torso angle: <span class="math-chip">12°</span>
+                        </div>
+                        <div class="quiz-buttons">
+                            <button class="quiz-btn" onclick="answerQuiz(2, 'good')" data-answer="good" id="btn-2-good">
+                                Good Posture
+                            </button>
+                            <button class="quiz-btn" onclick="answerQuiz(2, 'poor')" data-answer="poor" id="btn-2-poor">
+                                Poor Posture
+                            </button>
+                        </div>
+                        <div class="quiz-feedback" id="feedback-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Narration -->
+        
+    </div>
+
+    <!-- Bottom Sticky Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-buttons">
+            <a href="models.html" class="btn-secondary">← Back: Models</a>
+            <a href="falllogic.html" class="btn-primary disabled" id="nextTutorialBtn">
+                <span id="nextBtnText">Scroll to unlock next tutorial →</span>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        <p>CS663 Computer Vision | Fall 2025</p>
+        <a href="#" class="back-to-top">Back to Top</a>
+    </footer>
+
+    <script>
+        // First Carousel functionality (Technical Analysis)
+        let currentCard = 0;
+        const totalCards = 3;
+
+        function updateCarousel() {
+            const track = document.getElementById('carouselTrack');
+            const cards = track.querySelectorAll('.carousel-card');
+            const dots = track.parentElement.parentElement.querySelectorAll('.dot');
+
+            // Update track position
+            const offset = currentCard * -420; // 400px card width + 20px gap
+            track.style.transform = `translateX(${offset}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentCard);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentCard);
+            });
+        }
+
+        function nextCard() {
+            currentCard = (currentCard + 1) % totalCards;
+            updateCarousel();
+        }
+
+        function previousCard() {
+            currentCard = (currentCard - 1 + totalCards) % totalCards;
+            updateCarousel();
+        }
+
+        function goToCard(index) {
+            currentCard = index;
+            updateCarousel();
+        }
+
+        // Second Carousel functionality (Application & UX)
+        let currentCard2 = 0;
+        const totalCards2 = 2;
+
+        function updateCarousel2() {
+            const track = document.getElementById('carouselTrack2');
+            const cards = track.querySelectorAll('.carousel-card');
+            const dots = track.parentElement.parentElement.querySelectorAll('.dot');
+
+            // Update track position
+            const offset = currentCard2 * -420; // 400px card width + 20px gap
+            track.style.transform = `translateX(${offset}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentCard2);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentCard2);
+            });
+        }
+
+        function nextCard2() {
+            currentCard2 = (currentCard2 + 1) % totalCards2;
+            updateCarousel2();
+        }
+
+        function previousCard2() {
+            currentCard2 = (currentCard2 - 1 + totalCards2) % totalCards2;
+            updateCarousel2();
+        }
+
+        function goToCard2(index) {
+            currentCard2 = index;
+            updateCarousel2();
+        }
+
+        // Auto-advance carousels every 8 seconds
+        let autoAdvance = setInterval(nextCard, 8000);
+        let autoAdvance2 = setInterval(nextCard2, 8000);
+
+        // Pause auto-advance on hover for first carousel
+        const carousel1 = document.querySelectorAll('.carousel-container')[0];
+        if (carousel1) {
+            carousel1.addEventListener('mouseenter', () => {
+                clearInterval(autoAdvance);
+            });
+
+            carousel1.addEventListener('mouseleave', () => {
+                autoAdvance = setInterval(nextCard, 8000);
+            });
+        }
+
+        // Pause auto-advance on hover for second carousel
+        const carousel2 = document.querySelectorAll('.carousel-container')[1];
+        if (carousel2) {
+            carousel2.addEventListener('mouseenter', () => {
+                clearInterval(autoAdvance2);
+            });
+
+            carousel2.addEventListener('mouseleave', () => {
+                autoAdvance2 = setInterval(nextCard2, 8000);
+            });
+        }
+
+        // Third Carousel functionality (Model Choice)
+        let currentCard3 = 0;
+        const totalCards3 = 5;
+
+        function updateCarousel3() {
+            const track = document.getElementById('carouselTrack3');
+            const cards = track.querySelectorAll('.carousel-card');
+            const dots = track.parentElement.parentElement.querySelectorAll('.dot');
+
+            // Update track position
+            const offset = currentCard3 * -420; // 400px card width + 20px gap
+            track.style.transform = `translateX(${offset}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentCard3);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentCard3);
+            });
+        }
+
+        function nextCard3() {
+            currentCard3 = (currentCard3 + 1) % totalCards3;
+            updateCarousel3();
+        }
+
+        function previousCard3() {
+            currentCard3 = (currentCard3 - 1 + totalCards3) % totalCards3;
+            updateCarousel3();
+        }
+
+        function goToCard3(index) {
+            currentCard3 = index;
+            updateCarousel3();
+        }
+
+        // Auto-advance third carousel every 8 seconds
+        let autoAdvance3 = setInterval(nextCard3, 8000);
+
+        // Pause auto-advance on hover for third carousel
+        const carousel3 = document.querySelectorAll('.carousel-container')[2];
+        if (carousel3) {
+            carousel3.addEventListener('mouseenter', () => {
+                clearInterval(autoAdvance3);
+            });
+
+            carousel3.addEventListener('mouseleave', () => {
+                autoAdvance3 = setInterval(nextCard3, 8000);
+            });
+        }
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.section-card');
+            cards.forEach(card => observer.observe(card));
+
+            // Animate progress bar
+            const progressFill = document.querySelector('.progress-fill');
+            if (progressFill) {
+                setTimeout(() => {
+                    progressFill.style.width = '40%';
+                }, 500);
+            }
+
+            // Initialize all three carousels
+            updateCarousel();
+            updateCarousel2();
+            updateCarousel3();
+        });
+
+        // Smooth scrolling for back to top
+        document.addEventListener('DOMContentLoaded', () => {
+            const backToTop = document.querySelector('.back-to-top');
+            if (backToTop) {
+                backToTop.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+        });
+
+        // Quiz functionality with validation
+        const quizAnswers = {
+            0: 'poor',    // 25° neck + 18° torso = Poor posture (both exceed thresholds)
+            1: 'good',    // 8° neck + 5° torso = Good posture (within normal range)
+            2: 'poor'     // 15° neck + 12° torso = Poor posture (mild slouch range)
+        };
+
+        const quizFeedback = {
+            0: {
+                correct: "✅ Excellent! Both neck angle (25°) and torso angle (18°) exceed the thresholds for good posture. This indicates poor posture with forward head position that could lead to neck strain and increased fall risk.",
+                incorrect: "❌ Not quite. With neck angle at 25° (>20°) and torso angle at 18° (>10°), both exceed our thresholds for good posture. This indicates slouching that requires posture coaching."
+            },
+            1: {
+                correct: "✅ Perfect! Both neck angle (8°) and torso angle (5°) are within the upright range (0-10°), indicating excellent posture alignment with proper spinal positioning.",
+                incorrect: "❌ Actually, both angles are well within the upright range (0-10°), which indicates good posture with proper spinal alignment. This person has excellent posture!"
+            },
+            2: {
+                correct: "✅ Good analysis! While not severe, neck angle (15°) and torso angle (12°) fall in the mild slouch range (10-20°), indicating room for improvement and potential for gentle coaching.",
+                incorrect: "❌ Look closer. Both angles fall in the mild slouch range (10-20°), which suggests the person could benefit from posture coaching to prevent progression to worse posture."
+            }
+        };
+
+        // Track quiz state
+        const quizState = {
+            answered: [false, false, false],
+            correct: [false, false, false]
+        };
+
+        function answerQuiz(questionIndex, userAnswer) {
+            // Validation: prevent multiple answers
+            if (quizState.answered[questionIndex]) {
+                return;
+            }
+
+            const correctAnswer = quizAnswers[questionIndex];
+            const isCorrect = userAnswer === correctAnswer;
+
+            // Update quiz state
+            quizState.answered[questionIndex] = true;
+            quizState.correct[questionIndex] = isCorrect;
+
+            // Get elements
+            const goodBtn = document.getElementById(`btn-${questionIndex}-good`);
+            const poorBtn = document.getElementById(`btn-${questionIndex}-poor`);
+            const feedback = document.getElementById(`feedback-${questionIndex}`);
+            const card = document.getElementById(`quiz-card-${questionIndex}`);
+
+            // Update button styles
+            if (correctAnswer === 'good') {
+                goodBtn.classList.add('correct');
+                if (!isCorrect) poorBtn.classList.add('incorrect');
+            } else {
+                poorBtn.classList.add('correct');
+                if (!isCorrect) goodBtn.classList.add('incorrect');
+            }
+
+            // Disable buttons
+            goodBtn.disabled = true;
+            poorBtn.disabled = true;
+
+            // Show feedback with animation
+            feedback.className = `quiz-feedback ${isCorrect ? 'correct' : 'incorrect'} show`;
+            feedback.innerHTML = isCorrect ?
+                quizFeedback[questionIndex].correct :
+                quizFeedback[questionIndex].incorrect;
+
+            // Add visual feedback to card
+            card.style.transform = isCorrect ?
+                'translateY(-6px) scale(1.02)' :
+                'translateY(-2px) scale(1.01)';
+
+            // Check if all questions answered
+            setTimeout(() => {
+                checkQuizCompletion();
+            }, 500);
+        }
+
+        function checkQuizCompletion() {
+            const allAnswered = quizState.answered.every(answered => answered);
+            if (allAnswered) {
+                const correctCount = quizState.correct.filter(correct => correct).length;
+                const totalQuestions = quizState.correct.length;
+
+                // Show completion message
+                showQuizCompletion(correctCount, totalQuestions);
+            }
+        }
+
+        function showQuizCompletion(correct, total) {
+            const percentage = Math.round((correct / total) * 100);
+            let message = '';
+            let emoji = '';
+
+            if (percentage >= 100) {
+                message = "Perfect score! You have excellent understanding of posture detection thresholds.";
+                emoji = "🎉";
+            } else if (percentage >= 67) {
+                message = "Great job! You understand most posture detection concepts well.";
+                emoji = "👏";
+            } else {
+                message = "Good effort! Review the angle thresholds: 0-10° (good), 10-20° (mild slouch), >20° (poor).";
+                emoji = "📚";
+            }
+
+            // Create completion notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                border: 2px solid var(--blue);
+                border-radius: 16px;
+                padding: 1.5rem;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+                z-index: 1000;
+                max-width: 300px;
+                animation: slideInRight 0.5s ease;
+            `;
+            notification.innerHTML = `
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${emoji}</div>
+                <div style="font-weight: 600; margin-bottom: 0.5rem;">Quiz Complete!</div>
+                <div style="font-size: 0.9rem; color: var(--secondary-text);">
+                    Score: ${correct}/${total} (${percentage}%)
+                </div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;">
+                    ${message}
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Remove notification after 5 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 500);
+            }, 5000);
+        }
+
+        // Keyboard navigation for first carousel (when focused)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                previousCard();
+            } else if (e.key === 'ArrowRight') {
+                nextCard();
+            }
+        });
+
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+
+            audio.onended = function() {
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            };
+        }
+
+        // Scroll-based bottom navigation and tutorial button
+        let nextTutorialUnlocked = false;
+        let bottomNavVisible = false;
+        function checkScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercentage = (scrollTop / documentHeight) * 100;
+            const bottomNav = document.querySelector('.bottom-nav');
+            const nextBtn = document.getElementById('nextTutorialBtn');
+            const btnText = document.getElementById('nextBtnText');
+
+            // Show bottom navigation when user scrolls 30% of the page
+            if (scrollPercentage >= 30 && !bottomNavVisible) {
+                bottomNavVisible = true;
+                bottomNav.classList.add('visible');
+            } else if (scrollPercentage < 30 && bottomNavVisible) {
+                bottomNavVisible = false;
+                bottomNav.classList.remove('visible');
+            }
+
+            // Enable next button when user scrolls 90% of the page
+            if (scrollPercentage >= 90 && !nextTutorialUnlocked) {
+                nextTutorialUnlocked = true;
+                nextBtn.classList.remove('disabled');
+                btnText.textContent = 'Next: Fall Logic →';
+                nextBtn.style.animation = 'pulse 2s infinite';
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }
+        }
+        window.addEventListener('scroll', checkScrollProgress);
+        if (!document.querySelector('#pulseAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pulseAnimation';
+            style.textContent = `@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>

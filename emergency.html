@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Workflow - CS663 Computer Vision</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+    <style>
+        /* CSS Variables */
+        :root {
+            --blue: #0071e3;
+            --text: #1d1d1f;
+            --secondary-text: #515154;
+            --muted: #86868b;
+            --bg: #fff;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            --border: #e9eef5;
+            --gradient-start: #f9fafc;
+            --gradient-end: #fff;
+            --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(249,250,252,0.8) 100%);
+            --glass-bg: rgba(255,255,255,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: linear-gradient(to bottom, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            height: 100%;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--blue);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: var(--text);
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 999;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            margin-top: 60px;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            max-width: 600px;
+            margin: 0 auto;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), #00a8ff);
+            border-radius: 2px;
+            transition: width 0.8s ease;
+            width: 60%;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .hero .subtitle {
+            font-size: 1.25rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            margin-bottom: 3rem;
+            padding: 3rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+        }
+
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.15);
+        }
+
+        .section-card h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section-card p {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .section-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .section-card li {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .section-card li::before {
+            content: "•";
+            color: var(--blue);
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        /* Callout Cards */
+        .callout {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            border-left: 4px solid var(--blue);
+        }
+
+        .callout.warning {
+            background: linear-gradient(135deg, #fff8f0 0%, #ffebcc 100%);
+            border-color: rgba(255, 152, 0, 0.3);
+            border-left-color: #ff9800;
+        }
+
+        .callout h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .callout p {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Interactive Demo */
+        .demo-container {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .demo-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-demo {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--blue);
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-demo:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-demo:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .countdown-display {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--blue);
+            margin: 1rem 0;
+        }
+
+        .countdown-ring {
+            width: 120px;
+            height: 120px;
+            border: 8px solid #e0e0e0;
+            border-top: 8px solid var(--blue);
+            border-radius: 50%;
+            margin: 1rem auto;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Navigation Footer */
+        .nav-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .nav-footer.visible {
+            transform: translateY(0);
+        }
+
+        .nav-pill {
+            padding: 0.75rem 1.5rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-pill.prev {
+            background: #f5f5f7;
+            color: var(--text);
+        }
+
+        .nav-pill.next {
+            background: var(--blue);
+            color: white;
+        }
+
+        .nav-pill.disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .nav-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Carousel Styles */
+        .carousel-section {
+            margin: 3rem 0;
+            position: relative;
+        }
+
+        .carousel-container {
+            position: relative;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 2rem;
+            transition: transform 0.5s ease;
+        }
+
+        .carousel-card {
+            flex: 0 0 400px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            opacity: 0.7;
+            transform: scale(0.95);
+            transition: all 0.4s ease;
+        }
+
+        .carousel-card.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .carousel-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 2rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        .card-summary {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .card-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--secondary-text);
+            line-height: 1.5;
+        }
+
+        .card-features li::before {
+            content: "•";
+            color: var(--blue);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .carousel-nav:hover {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .carousel-nav.prev {
+            left: 1rem;
+        }
+
+        .carousel-nav.next {
+            right: 1rem;
+        }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--blue);
+            transform: scale(1.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 3rem 1rem 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .section-card {
+                padding: 2rem;
+            }
+
+            .demo-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .nav-footer {
+                padding: 1rem;
+            }
+
+            .carousel-container {
+                padding: 0 1rem;
+            }
+
+            .carousel-card {
+                flex: 0 0 320px;
+                padding: 1.5rem;
+            }
+
+            .carousel-nav {
+                width: 40px;
+                height: 40px;
+            }
+
+            .carousel-nav.prev {
+                left: 0.5rem;
+            }
+
+            .carousel-nav.next {
+                right: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html">Sensors</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="posture.html">Posture</a></li>
+                <li><a href="falllogic.html">Fall Logic</a></li>
+                <li><a href="emergency.html" class="active">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">4 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/emergency.mp3" preload="metadata"></audio>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-text">Step 6 of 8: Emergency Workflow</div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Emergency Workflow</h1>
+        <p class="subtitle">From on-device fall detection to caregiver notification—private, reliable, and human-in-the-loop.</p>
+        <div class="breadcrumb">Step 6 of 8: Emergency Workflow</div>
+    </section>
+
+    <div class="container">
+        <!-- Overview Section -->
+        <div class="section-card">
+            <h2>Overview: What Happens After "Fall Detected"</h2>
+            <p>When our fall detection algorithm confirms a fall candidate, a carefully orchestrated emergency workflow begins. This end-to-end process prioritizes user safety while preventing false alarms through human-in-the-loop confirmation:</p>
+
+            <ol style="list-style: decimal; padding-left: 2rem; margin: 1.5rem 0;">
+                <li style="margin-bottom: 0.75rem;">Detector raises a <strong>fall candidate</strong> based on the 3-stage rule logic</li>
+                <li style="margin-bottom: 0.75rem;">Show <strong>"I'm OK?"</strong> dialog with <strong>countdown (10–15 s)</strong> and text-to-speech announcement</li>
+                <li style="margin-bottom: 0.75rem;">If not canceled → acquire GPS location and compose <strong>SMS with coordinates</strong> <a href="bibliography.html#ref-6">[6]</a></li>
+                <li style="margin-bottom: 0.75rem;">Send emergency message to up to <strong>3 contacts</strong> with escalation policy</li>
+                <li style="margin-bottom: 0.75rem;">Optional <strong>escalation</strong> if no acknowledgment received within <strong>60–90 s</strong></li>
+                <li style="margin-bottom: 0.75rem;">Log the event and rate-limit further alerts for <strong>≥ 5 min</strong></li>
+            </ol>
+
+            <div class="callout">
+                <h3>Design Principles</h3>
+                <ul>
+                    <li><strong>Privacy-first:</strong> No video or images transmitted—only text and GPS coordinates</li>
+                    <li><strong>User confirmation:</strong> Always allow cancellation to prevent false alarms</li>
+                    <li><strong>Reliability:</strong> Multiple delivery paths with retry logic and escalation</li>
+                    <li><strong>Accessibility:</strong> Voice prompts, haptic feedback, and large touch targets</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Workflow Carousel -->
+    <section class="carousel-section">
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- Flowchart Card -->
+                    <div class="carousel-card active">
+                        <h3 class="card-title">Emergency Flowchart</h3>
+                        <div class="mermaid" style="font-size: 0.8rem; margin: 1rem 0;">
+flowchart TD
+  A[Fall Detected] --> B[Show Countdown 10-15s]
+  B -->|Cancel| C[Resume Monitoring]
+  B -->|Timeout| D[Get GPS Location]
+  D --> E[Send SMS Alert]
+  E --> F[Escalate if No Response]
+  F --> G[Rate Limit 5min]
+                        </div>
+                        <p class="card-summary">Complete workflow from detection to notification with human-in-the-loop confirmation <a href="bibliography.html#ref-6">[6]</a>.</p>
+                    </div>
+
+                    <!-- Countdown UX Card -->
+                    <div class="carousel-card">
+                        <h3 class="card-title">Countdown Interface</h3>
+                        <div class="card-image" style="background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);">
+                            ⏰ "Are you OK?"
+                        </div>
+                        <p class="card-summary">Apple-style confirmation dialog with <strong>10–15 s</strong> countdown, TTS announcement, and haptic feedback.</p>
+                        <ul class="card-features">
+                            <li>Large modal with animated countdown ring</li>
+                            <li>Voice prompt: "A fall was detected. Tap cancel if you're okay."</li>
+                            <li>Haptic buzz at start and 5s warning</li>
+                            <li>WCAG AA accessibility compliance</li>
+                        </ul>
+                    </div>
+
+                    <!-- SMS Delivery Card -->
+                    <div class="carousel-card">
+                        <h3 class="card-title">SMS Delivery <a href="bibliography.html#ref-6">[6]</a></h3>
+                        <div class="card-image">
+                            📱 Emergency Alert
+                        </div>
+                        <p class="card-summary">Multiple delivery paths with GPS coordinates and escalation to <strong>3 contacts</strong>.</p>
+                        <ul class="card-features">
+                            <li><strong>SmsManager:</strong> Direct SMS (fastest)</li>
+                            <li><strong>Intent:</strong> System SMS app (Play-friendly)</li>
+                            <li><strong>Server relay:</strong> Twilio/AWS backup</li>
+                            <li>Rate limiting: <strong>≥ 5 min</strong> between alerts</li>
+                        </ul>
+                    </div>
+
+                    <!-- Privacy & Safety Card -->
+                    <div class="carousel-card">
+                        <h3 class="card-title">Privacy & Safety</h3>
+                        <div class="card-image" style="background: linear-gradient(135deg, #fff8f0 0%, #ffebcc 100%);">
+                            🔒 Private
+                        </div>
+                        <p class="card-summary">Privacy-first design with no video transmission and local-only processing.</p>
+                        <ul class="card-features">
+                            <li>No images/video leave device</li>
+                            <li>Only GPS + text during emergencies</li>
+                            <li>Local encryption with Android Keystore</li>
+                            <li>Large cancel button prevents false alarms</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToCard(0)"></div>
+                <div class="dot" onclick="goToCard(1)"></div>
+                <div class="dot" onclick="goToCard(2)"></div>
+                <div class="dot" onclick="goToCard(3)"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Interactive Countdown Demo -->
+        <div class="section-card">
+            <h2>Interactive Countdown Demo</h2>
+            <p>Experience the emergency confirmation interface with realistic timing and feedback:</p>
+
+            <div class="demo-container">
+                <div class="demo-controls">
+                    <button class="btn-demo" id="startDemo">🚨 Start Fall Detection</button>
+                    <button class="btn-demo" id="cancelDemo" disabled>❌ I'm OK (Cancel)</button>
+                </div>
+
+                <div id="countdownDisplay" class="countdown-display" style="display: none;">15</div>
+                <div id="countdownRing" class="countdown-ring" style="display: none;"></div>
+                <div id="demoStatus" style="margin-top: 1rem; font-weight: 500; min-height: 2rem;"></div>
+            </div>
+
+            <div class="callout">
+                <h3>Demo Features</h3>
+                <p>Includes text-to-speech announcement, haptic feedback (on supported devices), and realistic SMS preview. No actual emergency messages are sent.</p>
+            </div>
+        </div>
+
+        <!-- SMS Message Example -->
+        <div class="section-card">
+            <h2>Emergency SMS Format <a href="bibliography.html#ref-6">[6]</a></h2>
+            <p>Simple, clear emergency messages with GPS coordinates for quick response:</p>
+
+            <div style="background: #f8f9fa; color: #333; border: 1px solid #ddd; border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; font-family: monospace;">
+ALERT: Possible fall detected for Jane Doe at 4:24 PM.
+Location: 37.7749, -122.4194 (±7m)
+Map: https://maps.google.com/?q=37.7749,-122.4194
+If you reach them, reply OK.
+            </div>
+
+            <div class="callout">
+                <h3>Privacy First</h3>
+                <p><strong>No images or video are transmitted.</strong> Only essential text and GPS coordinates during confirmed emergencies.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Narration -->
+    
+
+    <!-- Navigation Footer -->
+    <div class="nav-footer">
+        <a href="falllogic.html" class="nav-pill prev">← Back: Fall Logic</a>
+        <a href="limitations.html" class="nav-pill next disabled" id="nextTutorialBtn">
+            <span id="nextBtnText">Scroll to unlock next tutorial →</span>
+        </a>
+    </div>
+
+    <script>
+        // Intersection Observer for animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        // Observe all section cards
+        document.querySelectorAll('.section-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Initialize first card as visible
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstCard = document.querySelector('.section-card');
+            if (firstCard) {
+                firstCard.classList.add('visible');
+            }
+        });
+
+        // Carousel functionality
+        let currentCard = 0;
+        const totalCards = 4;
+
+        function getCardWidth() {
+            const card = document.querySelector('.carousel-card');
+            if (!card) return 432;
+            const cardRect = card.getBoundingClientRect();
+            const gap = 32; // 2rem gap
+            return cardRect.width + gap;
+        }
+
+        function updateCarousel() {
+            const track = document.getElementById('carouselTrack');
+            const cards = document.querySelectorAll('.carousel-card');
+            const dots = document.querySelectorAll('.dot');
+            const cardWidth = getCardWidth();
+
+            // Update track position
+            track.style.transform = `translateX(-${currentCard * cardWidth}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentCard);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentCard);
+            });
+        }
+
+        function nextCard() {
+            currentCard = (currentCard + 1) % totalCards;
+            updateCarousel();
+        }
+
+        function previousCard() {
+            currentCard = (currentCard - 1 + totalCards) % totalCards;
+            updateCarousel();
+        }
+
+        function goToCard(index) {
+            currentCard = index;
+            updateCarousel();
+        }
+
+        // Auto-advance carousel every 8 seconds
+        let autoAdvance = setInterval(nextCard, 8000);
+
+        // Pause auto-advance on hover
+        document.querySelector('.carousel-container').addEventListener('mouseenter', () => {
+            clearInterval(autoAdvance);
+        });
+
+        document.querySelector('.carousel-container').addEventListener('mouseleave', () => {
+            autoAdvance = setInterval(nextCard, 8000);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                previousCard();
+            } else if (e.key === 'ArrowRight') {
+                nextCard();
+            }
+        });
+
+        // Interactive Countdown Demo
+        let countdownTimer = null;
+        let currentCount = 15;
+
+        const startBtn = document.getElementById('startDemo');
+        const cancelBtn = document.getElementById('cancelDemo');
+        const countdownDisplay = document.getElementById('countdownDisplay');
+        const countdownRing = document.getElementById('countdownRing');
+        const demoStatus = document.getElementById('demoStatus');
+
+        function startCountdown() {
+            currentCount = 15;
+            startBtn.disabled = true;
+            cancelBtn.disabled = false;
+            countdownDisplay.style.display = 'block';
+            countdownRing.style.display = 'block';
+            demoStatus.textContent = 'Fall detected! Tap Cancel if you\'re okay.';
+            demoStatus.style.color = '#ff6b35';
+
+            // Simulate TTS announcement
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance('A fall was detected. Tap cancel if you are okay.');
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                speechSynthesis.speak(utterance);
+            }
+
+            // Simulate haptic feedback (if available)
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            }
+
+            countdownTimer = setInterval(() => {
+                currentCount--;
+                countdownDisplay.textContent = currentCount;
+
+                // Warning at 5 seconds
+                if (currentCount === 5) {
+                    demoStatus.textContent = '⚠️ Sending alert in 5 seconds...';
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate([100, 50, 100, 50, 100]);
+                    }
+                }
+
+                if (currentCount <= 0) {
+                    clearInterval(countdownTimer);
+                    sendAlert();
+                }
+            }, 1000);
+        }
+
+        function cancelCountdown() {
+            clearInterval(countdownTimer);
+            resetDemo();
+            demoStatus.textContent = '✅ Alert canceled. Monitoring resumed.';
+            demoStatus.style.color = '#28a745';
+        }
+
+        function sendAlert() {
+            resetDemo();
+            demoStatus.innerHTML = '📱 <strong>Sending SMS...</strong><br/>ALERT: Possible fall detected for Demo User at ' +
+                new Date().toLocaleTimeString() + '.<br/>Location: 37.7749, -122.4194 (±7m)<br/>Map: https://maps.google.com/?q=37.7749,-122.4194';
+            demoStatus.style.color = '#0071e3';
+        }
+
+        function resetDemo() {
+            startBtn.disabled = false;
+            cancelBtn.disabled = true;
+            countdownDisplay.style.display = 'none';
+            countdownRing.style.display = 'none';
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startCountdown);
+        cancelBtn.addEventListener('click', cancelCountdown);
+
+        // Keyboard accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !cancelBtn.disabled) {
+                cancelCountdown();
+            }
+        });
+
+        // Progressive enhancement for Mermaid
+        if (typeof mermaid !== 'undefined') {
+            mermaid.init();
+        }
+
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+
+            audio.onended = function() {
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            };
+        }
+
+        // Scroll-based bottom navigation and tutorial button
+        let nextTutorialUnlocked = false;
+        let bottomNavVisible = false;
+        function checkScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercentage = (scrollTop / documentHeight) * 100;
+            const bottomNav = document.querySelector('.nav-footer');
+            const nextBtn = document.getElementById('nextTutorialBtn');
+            const btnText = document.getElementById('nextBtnText');
+
+            if (scrollPercentage >= 30 && !bottomNavVisible) {
+                bottomNavVisible = true;
+                bottomNav.classList.add('visible');
+            } else if (scrollPercentage < 30 && bottomNavVisible) {
+                bottomNavVisible = false;
+                bottomNav.classList.remove('visible');
+            }
+
+            if (scrollPercentage >= 90 && !nextTutorialUnlocked) {
+                nextTutorialUnlocked = true;
+                nextBtn.classList.remove('disabled');
+                btnText.textContent = 'Next: Limitations →';
+                nextBtn.style.animation = 'pulse 2s infinite';
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }
+        }
+        window.addEventListener('scroll', checkScrollProgress);
+        if (!document.querySelector('#pulseAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pulseAnimation';
+            style.textContent = `@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>

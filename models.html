@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Estimation Models - CS663 Computer Vision</title>
+    <style>
+        /* CSS Variables */
+        :root {
+            --blue: #0071e3;
+            --text: #1d1d1f;
+            --secondary-text: #515154;
+            --muted: #86868b;
+            --bg: #fff;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            --border: #e9eef5;
+            --gradient-start: #f9fafc;
+            --gradient-end: #fff;
+            --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(249,250,252,0.8) 100%);
+            --glass-bg: rgba(255,255,255,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            height: 100%;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--blue);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: var(--text);
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1001;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Image Credits */
+        .card-image {
+            position: relative;
+        }
+
+        .image-credit {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(0, 113, 227, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--blue);
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-credit:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.15);
+            box-shadow: 0 6px 20px rgba(0, 113, 227, 0.3);
+            border-color: var(--blue);
+        }
+
+        .credit-popup {
+            position: absolute;
+            bottom: 40px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.92);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 150;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-credit:hover .credit-popup {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 997;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background: #e5e5e7;
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 1.5s ease-out;
+        }
+
+        /* Intro Section */
+        .intro-section {
+            padding: 180px 2rem 80px;
+            text-align: center;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .intro-section h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .intro-section .subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .intro-section .description {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Carousel Section */
+        .carousel-section {
+            padding: 4rem 0;
+            position: relative;
+        }
+
+        .carousel-container {
+            position: relative;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 4rem;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            gap: 2rem;
+        }
+
+        .carousel-card {
+            flex: 0 0 400px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .carousel-card.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .carousel-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        .card-summary {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .card-features {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .feature-icon {
+            width: 16px;
+            height: 16px;
+            margin-top: 0.1rem;
+            flex-shrink: 0;
+        }
+
+        .feature-icon.strength { color: #34c759; }
+        .feature-icon.limitation { color: #ff9500; }
+        .feature-icon.best-for { color: var(--blue); }
+
+        /* Carousel Navigation */
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .carousel-nav:hover {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-nav.prev {
+            left: 1rem;
+        }
+
+        .carousel-nav.next {
+            right: 1rem;
+        }
+
+        /* Progress Dots */
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--blue);
+            transform: scale(1.2);
+        }
+
+        .dot:hover {
+            background: var(--blue);
+            opacity: 0.7;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            margin-bottom: 3rem;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.4s ease;
+        }
+
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.15);
+        }
+
+        .card-content {
+            padding: 3rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .card-grid.reverse {
+            direction: rtl;
+        }
+
+        .card-grid.reverse > * {
+            direction: ltr;
+        }
+
+        .card-text h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .card-text p {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .card-text ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card-text li {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .card-text li.strength::before {
+            content: "✅";
+            font-size: 1.2rem;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .card-text li.limitation::before {
+            content: "⚠️";
+            font-size: 1.2rem;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .card-text li.best-for::before {
+            content: "🎯";
+            font-size: 1.2rem;
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .card-text li::before {
+            content: "•";
+            color: var(--blue);
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: -0.1rem;
+        }
+
+        /* Image Placeholders */
+        .image-placeholder {
+            width: 100%;
+            height: 300px;
+            background: #f5f5f7;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 1rem;
+            text-align: center;
+            padding: 2rem;
+        }
+
+
+
+        /* Bulb Button */
+        .bulb-btn {
+            background: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.3rem;
+            margin-left: 1rem;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .bulb-btn:hover {
+            background: #0062c8;
+            transform: scale(1.15);
+            box-shadow: 0 6px 24px rgba(0, 113, 227, 0.5);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
+            }
+            50% {
+                box-shadow: 0 6px 20px rgba(0, 113, 227, 0.5);
+            }
+        }
+
+        /* Citations */
+        a[href^="bibliography.html"] {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 0.1rem;
+        }
+
+        a[href^="bibliography.html"]:hover {
+            text-decoration: underline;
+        }
+
+        /* Toast System */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 10000;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: var(--text);
+            padding: 1.25rem 1.75rem;
+            border-radius: 25px;
+            margin-bottom: 1rem;
+            max-width: 380px;
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.25);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+            transform: translateY(100px) scale(0.8);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: auto;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .toast-close {
+            position: absolute;
+            top: 0.75rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--blue);
+            cursor: pointer;
+            font-size: 1.3rem;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .toast-close:hover {
+            background: rgba(0, 113, 227, 0.1);
+        }
+
+        /* Table Styles */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            margin: 2rem 0;
+            background: #fff;
+        }
+
+        .comparison-table th {
+            background: var(--blue);
+            color: white;
+            padding: 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .comparison-table td {
+            padding: 1.25rem;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .comparison-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Expandable Pills */
+        .pills-container {
+            margin: 2rem 0;
+        }
+
+        .pills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .pill {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 9999px;
+            padding: 0.875rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .pill:hover {
+            border-color: var(--blue);
+            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .pill.active {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: white;
+            box-shadow: 0 6px 20px rgba(0, 113, 227, 0.25);
+        }
+
+        .pill-content {
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.35s ease;
+            display: none;
+        }
+
+        .pill-content.active {
+            opacity: 1;
+            transform: translateY(0);
+            display: block;
+        }
+
+        .pill-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f6ff;
+            margin-bottom: 1rem;
+        }
+
+        .pill-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .pill-card p {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+        }
+
+        /* Pipeline Flow */
+        .pipeline-container {
+            margin: 3rem 0;
+            position: relative;
+        }
+
+        .pipeline-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            margin: 2rem 0;
+        }
+
+        .pipeline-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .pipeline-step {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 9999px;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 2;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .pipeline-step:hover {
+            border-color: var(--blue);
+            box-shadow: 0 6px 20px rgba(0, 113, 227, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .pipeline-step:focus {
+            outline: none;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+        }
+
+        .pipeline-step-icon {
+            font-size: 1.25rem;
+        }
+
+        .pipeline-step-label {
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        /* Modal/Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text);
+            font-size: 1.2rem;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        .modal-close:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--blue);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-icon {
+            font-size: 2rem;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .modal-content {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+
+
+        /* Highlight Spans */
+        .highlight {
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* Mini Cards */
+        .mini-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .mini-card {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .mini-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .mini-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 113, 227, 0.15);
+        }
+
+        .mini-card .emoji {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .mini-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .mini-card p {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            line-height: 1.5;
+        }
+
+        /* Gradient Bar */
+        .gradient-bar {
+            background: linear-gradient(135deg, var(--blue) 0%, #005bb5 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin: 5rem 0;
+            border-radius: 28px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            line-height: 1.6;
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gradient-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Bottom Sticky Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 113, 227, 0.1);
+            padding: 1.5rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .bottom-nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 1rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0062c8;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-primary.disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .btn-primary.disabled:hover {
+            background: #ccc;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--blue);
+            border: 1px solid rgba(0, 113, 227, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: var(--blue);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        /* Audio Section */
+        .audio-section {
+            background: #f5f5f7;
+            border-radius: 18px;
+            padding: 2rem;
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .audio-section audio {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem 8rem;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+            margin-top: 6rem;
+        }
+
+        footer p {
+            margin-bottom: 1rem;
+        }
+
+        .back-to-top {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-to-top:hover {
+            text-decoration: underline;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .intro-section {
+                padding: 160px 1rem 60px;
+            }
+
+            .carousel-container {
+                padding: 0 1rem;
+            }
+
+            .carousel-card {
+                flex: 0 0 320px;
+                padding: 1.5rem;
+            }
+
+            .carousel-nav {
+                width: 40px;
+                height: 40px;
+            }
+
+            .carousel-nav.prev {
+                left: 0.5rem;
+            }
+
+            .carousel-nav.next {
+                right: 0.5rem;
+            }
+
+            .card-content {
+                padding: 2rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .bottom-nav {
+                padding: 1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .toast-container {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+
+            .toast {
+                max-width: none;
+            }
+
+            .pipeline-flow {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .pipeline-line {
+                display: none;
+            }
+
+            .pipeline-step {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pipeline-step-label {
+                white-space: normal;
+            }
+
+            .pills-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .pill {
+                padding: 1rem 1.25rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .carousel-card {
+                flex: 0 0 280px;
+                padding: 1.25rem;
+            }
+
+            .card-title {
+                font-size: 1.25rem;
+            }
+
+            .card-summary {
+                font-size: 0.9rem;
+            }
+
+            .card-features li {
+                font-size: 0.85rem;
+            }
+
+            .modal {
+                width: 95%;
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .modal-title {
+                font-size: 1.5rem;
+            }
+
+            .modal-content {
+                font-size: 1rem;
+            }
+
+            .pipeline-step-label {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html">Sensors</a></li>
+                <li><a href="models.html" class="active">Models</a></li>
+                <li><a href="posture.html">Posture</a></li>
+                <li><a href="falllogic.html">Fall Logic</a></li>
+                <li><a href="emergency.html">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">7 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/models.mp3" preload="metadata"></audio>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-text">Step 3 of 8: Pose Models</div>
+        <div class="progress-bar">
+            <div class="progress-fill" data-progress="30"></div>
+        </div>
+    </div>
+
+    <!-- Intro Section -->
+    <section class="intro-section">
+        <h1>Pose Estimation Models</h1>
+        <p class="subtitle">Different model families for fall detection and posture analysis.</p>
+        <p class="description">Modern fall detection research leverages multiple pose estimation families. Each has trade-offs in speed, accuracy, and detail. Explore them below.</p>
+    </section>
+
+    <!-- Horizontal Carousel -->
+    <section class="carousel-section">
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextCard()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- MoveNet Card -->
+                    <div class="carousel-card active" data-toast="💡 MoveNet Lightning is favored for continuous monitoring due to high FPS.">
+                        <div class="card-image">
+                            <img src="images/movenet.png" alt="MoveNet architecture diagram showing Google's lightweight pose estimation model with 17 keypoints, MobileNetV2 backbone, and real-time processing pipeline" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">MoveNet <a href="bibliography.html#ref-2">[2]</a></h3>
+                        <p class="card-summary">Google's lightweight pose estimation model designed for real-time applications. Comes in Lightning (fastest) and Thunder (more accurate) variants.</p>
+                        <ul class="card-features">
+                            <li>
+                                <svg class="feature-icon strength" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                </svg>
+                                <span><strong>Strengths:</strong> High FPS (30-60), low battery consumption, mobile-optimized</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon limitation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                                    <path d="M12 9v4"></path>
+                                    <path d="m12 17 .01 0"></path>
+                                </svg>
+                                <span><strong>Limitations:</strong> Only 17 keypoints, less detailed torso analysis</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon best-for" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <circle cx="12" cy="12" r="6"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                </svg>
+                                <span><strong>Best for:</strong> Continuous monitoring, battery-sensitive applications</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- BlazePose Card -->
+                    <div class="carousel-card" data-toast="💡 BlazePose captures torso curvature that MoveNet cannot.">
+                        <div class="card-image">
+                            <img src="images/blazepose.png" alt="BlazePose landmarks diagram showing MediaPipe's detailed 33-landmark pose estimation with pseudo-3D coordinates and anatomical precision" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">BlazePose <a href="bibliography.html#ref-1">[1]</a></h3>
+                        <p class="card-summary">MediaPipe's detailed 33-landmark pose estimation with pseudo-3D coordinates. Excellent for posture analysis and slouch detection.</p>
+                        <ul class="card-features">
+                            <li>
+                                <svg class="feature-icon strength" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                </svg>
+                                <span><strong>Strengths:</strong> 33 detailed landmarks, excellent torso analysis, pseudo-3D</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon limitation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                                    <path d="M12 9v4"></path>
+                                    <path d="m12 17 .01 0"></path>
+                                </svg>
+                                <span><strong>Limitations:</strong> Slower performance (15-25 FPS), higher battery consumption</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon best-for" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <circle cx="12" cy="12" r="6"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                </svg>
+                                <span><strong>Best for:</strong> Detailed posture analysis, medical applications</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- YOLO-Pose Card -->
+                    <div class="carousel-card" data-toast="💡 YOLO-Pose is robust for multi-person scenes.">
+                        <div class="card-image">
+                            <img src="images/yolo-pose.png" alt="YOLO-Pose detection diagram showing unified object detection and pose estimation architecture for multi-person fall detection scenarios" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">YOLO-Pose <a href="bibliography.html#ref-3">[3]</a></h3>
+                        <p class="card-summary">Unified object detection and pose estimation architecture. Robust in cluttered environments with multiple people.</p>
+                        <ul class="card-features">
+                            <li>
+                                <svg class="feature-icon strength" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                </svg>
+                                <span><strong>Strengths:</strong> Unified detection+pose, robust multi-person scenes</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon limitation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                                    <path d="M12 9v4"></path>
+                                    <path d="m12 17 .01 0"></path>
+                                </svg>
+                                <span><strong>Limitations:</strong> Heavier model, requires GPU optimization</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon best-for" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <circle cx="12" cy="12" r="6"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                </svg>
+                                <span><strong>Best for:</strong> Smart home monitoring, multi-person environments</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- RTMPose Card -->
+                    <div class="carousel-card" data-toast="💡 RTMPose balances MoveNet's speed with BlazePose's detail.">
+                        <div class="card-image">
+                            <img src="images/rtmpose.png" alt="RTMPose architecture diagram showing next-generation efficient pose estimation from OpenMMLab with modern attention mechanisms and mobile optimization" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                            <div class="image-credit">
+                                <span>AI</span>
+                                <div class="credit-popup">Generated by Gemini</div>
+                            </div>
+                        </div>
+                        <h3 class="card-title">RTMPose <a href="bibliography.html#ref-4">[4]</a></h3>
+                        <p class="card-summary">Next-generation efficient pose estimation from OpenMMLab. Balances speed and accuracy with modern architectural improvements.</p>
+                        <ul class="card-features">
+                            <li>
+                                <svg class="feature-icon strength" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20,6 9,17 4,12"></polyline>
+                                </svg>
+                                <span><strong>Strengths:</strong> State-of-the-art efficiency, balanced speed/accuracy</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon limitation" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                                    <path d="M12 9v4"></path>
+                                    <path d="m12 17 .01 0"></path>
+                                </svg>
+                                <span><strong>Limitations:</strong> Relatively new, less tested in production</span>
+                            </li>
+                            <li>
+                                <svg class="feature-icon best-for" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <circle cx="12" cy="12" r="6"></circle>
+                                    <circle cx="12" cy="12" r="2"></circle>
+                                </svg>
+                                <span><strong>Best for:</strong> Next-gen applications, balanced requirements</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToCard(0)"></div>
+                <div class="dot" onclick="goToCard(1)"></div>
+                <div class="dot" onclick="goToCard(2)"></div>
+                <div class="dot" onclick="goToCard(3)"></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+
+        <!-- Head-to-Head Comparison Table -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Head-to-Head Comparison</h2>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Keypoints</th>
+                            <th>FPS Range</th>
+                            <th>Accuracy</th>
+                            <th>Best Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>MoveNet Lightning</strong></td>
+                            <td>17</td>
+                            <td>30-60</td>
+                            <td>Good</td>
+                            <td>Continuous monitoring</td>
+                        </tr>
+                        <tr>
+                            <td><strong>BlazePose</strong></td>
+                            <td>33</td>
+                            <td>15-25</td>
+                            <td>Excellent</td>
+                            <td>Detailed posture analysis</td>
+                        </tr>
+                        <tr>
+                            <td><strong>YOLO-Pose</strong></td>
+                            <td>17</td>
+                            <td>20-30</td>
+                            <td>Very Good</td>
+                            <td>Multi-person scenes</td>
+                        </tr>
+                        <tr>
+                            <td><strong>RTMPose</strong></td>
+                            <td>17-133</td>
+                            <td>25-40</td>
+                            <td>Excellent</td>
+                            <td>Balanced applications</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Integration into Android -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Integration into Android</h2>
+                <p>Implementing pose estimation in Android follows a standard pipeline optimized for senior care applications:</p>
+
+                <div class="pipeline-container">
+                    <!-- Pipeline Flow -->
+                    <div class="pipeline-flow">
+                        <div class="pipeline-line"></div>
+
+                        <div class="pipeline-step" data-step="0" onclick="openPipelineModal(0)" tabindex="0" role="button" aria-label="Learn about CameraX integration">
+                            <span class="pipeline-step-icon">📷</span>
+                            <span class="pipeline-step-label">CameraX</span>
+                        </div>
+
+                        <div class="pipeline-step" data-step="1" onclick="openPipelineModal(1)" tabindex="0" role="button" aria-label="Learn about preprocessing pipeline">
+                            <span class="pipeline-step-icon">⚡</span>
+                            <span class="pipeline-step-label">Preprocessing</span>
+                        </div>
+
+                        <div class="pipeline-step" data-step="2" onclick="openPipelineModal(2)" tabindex="0" role="button" aria-label="Learn about TensorFlow Lite inference">
+                            <span class="pipeline-step-icon">🤖</span>
+                            <span class="pipeline-step-label">TFLite</span>
+                        </div>
+
+                        <div class="pipeline-step" data-step="3" onclick="openPipelineModal(3)" tabindex="0" role="button" aria-label="Learn about postprocessing logic">
+                            <span class="pipeline-step-icon">🎯</span>
+                            <span class="pipeline-step-label">Postprocessing</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Optimization Techniques -->
+        <div class="section-card">
+            <div class="card-content">
+                <h2>Optimization Techniques</h2>
+                <p>Key strategies for mobile deployment in senior care applications:</p>
+
+                <div class="pills-container">
+                    <div class="pills-grid">
+                        <div class="pill" onclick="togglePill(0)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-0">
+                            Quantization (FP16/INT8)
+                        </div>
+                        <div class="pill" onclick="togglePill(1)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-1">
+                            Frame Skipping
+                        </div>
+                        <div class="pill" onclick="togglePill(2)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-2">
+                            IMU Fusion
+                        </div>
+                        <div class="pill" onclick="togglePill(3)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-3">
+                            Buffer Reuse
+                        </div>
+                        <div class="pill" onclick="togglePill(4)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-4">
+                            Model Switching
+                        </div>
+                        <div class="pill" onclick="togglePill(5)" tabindex="0" role="button" aria-expanded="false" aria-controls="pill-content-5">
+                            GPU Acceleration
+                        </div>
+                    </div>
+
+                    <!-- Pill Content -->
+                    <div class="pill-content" data-pill="0" id="pill-content-0" role="region" aria-labelledby="pill-0">
+                        <div class="pill-card">
+                            <h3>Quantization (FP16/INT8)</h3>
+                            <p>Reduces precision from 32-bit floats to 16-bit or 8-bit integers to decrease memory size and speed up inference. Modern quantization techniques maintain accuracy within 1-2% of full precision while achieving 2-4x speedup on mobile hardware.</p>
+                        </div>
+                    </div>
+
+                    <div class="pill-content" data-pill="1">
+                        <div class="pill-card">
+                            <h3>Frame Skipping</h3>
+                            <p>Processes every Nth frame instead of all frames to reduce computational load. Smart skipping algorithms analyze motion vectors to skip frames during static periods while maintaining full processing during movement detection.</p>
+                        </div>
+                    </div>
+
+                    <div class="pill-content" data-pill="2">
+                        <div class="pill-card">
+                            <h3>IMU Fusion</h3>
+                            <p>Combines accelerometer and gyroscope data with pose estimation to improve fall detection accuracy. IMU sensors provide complementary motion information that helps distinguish between controlled movements and actual falls.</p>
+                        </div>
+                    </div>
+
+                    <div class="pill-content" data-pill="3">
+                        <div class="pill-card">
+                            <h3>Buffer Reuse</h3>
+                            <p>Reuses memory buffers across inference cycles to minimize garbage collection and memory allocation overhead. Pre-allocated tensor buffers significantly reduce latency spikes in real-time pose estimation applications.</p>
+                        </div>
+                    </div>
+
+                    <div class="pill-content" data-pill="4">
+                        <div class="pill-card">
+                            <h3>Model Switching</h3>
+                            <p>Dynamically switches between lightweight and detailed models based on context. Uses fast models for continuous monitoring and switches to accurate models when potential fall events are detected for verification.</p>
+                        </div>
+                    </div>
+
+                    <div class="pill-content" data-pill="5">
+                        <div class="pill-card">
+                            <h3>GPU Acceleration</h3>
+                            <p>Leverages mobile GPU compute shaders for parallel processing of pose estimation operations. GPU delegates in TensorFlow Lite can achieve 3-5x speedup over CPU inference while maintaining power efficiency.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Closing Summary -->
+        <div class="gradient-bar">
+            The right model depends on context — hybrid pipelines yield best results for senior care applications.
+        </div>
+
+        <!-- Audio Narration -->
+       
+    </div>
+
+    <!-- Bottom Sticky Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-buttons">
+            <a class="btn-secondary" href="sensors.html">← Back: Sensors</a>
+            <a class="btn-primary disabled" id="nextTutorialBtn" href="posture.html">
+                <span id="nextBtnText">Scroll to unlock next tutorial →</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Pipeline Modals -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <button class="modal-close" onclick="closePipelineModal()" aria-label="Close modal">×</button>
+            <div class="modal-header">
+                <span class="modal-icon" id="modalIcon">📷</span>
+                <h3 class="modal-title" id="modalTitle">CameraX Integration</h3>
+            </div>
+            <div class="modal-content" id="modalContent">
+                <p>Provides frame capture from the camera at <span class="highlight">~30 FPS</span>. Optimized for stable inference delivery in Android ML apps with automatic focus and exposure control.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>CS663 Computer Vision | Fall 2025</p>
+        <a href="#top" class="back-to-top">Back to Top</a>
+    </footer>
+
+    <script>
+        // Toast System
+        class ToastManager {
+            constructor() {
+                this.container = document.getElementById('toastContainer');
+                this.toasts = [];
+            }
+
+            show(message, duration = 5000) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = `
+                    ${message}
+                    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+                `;
+
+                this.container.appendChild(toast);
+
+                // Trigger animation
+                setTimeout(() => toast.classList.add('show'), 100);
+
+                // Auto-dismiss
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.classList.remove('show');
+                        setTimeout(() => toast.remove(), 300);
+                    }
+                }, duration);
+
+                return toast;
+            }
+        }
+
+        const toastManager = new ToastManager();
+
+        // Carousel functionality
+        let currentCard = 0;
+        const totalCards = 4;
+
+        function getCardWidth() {
+            const card = document.querySelector('.carousel-card');
+            if (!card) return 432;
+            const cardRect = card.getBoundingClientRect();
+            const gap = 32; // 2rem gap
+            return cardRect.width + gap;
+        }
+
+        function updateCarousel() {
+            const track = document.getElementById('carouselTrack');
+            const cards = document.querySelectorAll('.carousel-card');
+            const dots = document.querySelectorAll('.dot');
+            const cardWidth = getCardWidth();
+
+            // Update track position
+            track.style.transform = `translateX(-${currentCard * cardWidth}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentCard);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentCard);
+            });
+
+            // Trigger toast for active card
+            const activeCard = cards[currentCard];
+            const toastMessage = activeCard.getAttribute('data-toast');
+            if (toastMessage && !activeCard.dataset.toastTriggered) {
+                setTimeout(() => {
+                    toastManager.show(toastMessage, 6000);
+                }, 500);
+                activeCard.dataset.toastTriggered = 'true';
+            }
+        }
+
+        function nextCard() {
+            currentCard = (currentCard + 1) % totalCards;
+            updateCarousel();
+        }
+
+        function previousCard() {
+            currentCard = (currentCard - 1 + totalCards) % totalCards;
+            updateCarousel();
+        }
+
+        function goToCard(index) {
+            currentCard = index;
+            updateCarousel();
+        }
+
+        // Auto-advance carousel every 8 seconds
+        let autoAdvance = setInterval(nextCard, 8000);
+
+        // Pause auto-advance on hover
+        document.querySelector('.carousel-container').addEventListener('mouseenter', () => {
+            clearInterval(autoAdvance);
+        });
+
+        document.querySelector('.carousel-container').addEventListener('mouseleave', () => {
+            autoAdvance = setInterval(nextCard, 8000);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                previousCard();
+            } else if (e.key === 'ArrowRight') {
+                nextCard();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            updateCarousel();
+        });
+
+        // Pipeline modal functionality
+        const pipelineData = [
+            {
+                icon: '📷',
+                title: 'CameraX Integration',
+                content: 'Provides frame capture from the camera at <span class="highlight">~30 FPS</span>. Optimized for stable inference delivery in Android ML apps with automatic focus and exposure control.',
+            
+            },
+            {
+                icon: '⚡',
+                title: 'Preprocessing Pipeline',
+                content: 'Resizes and normalizes input frames (e.g., <span class="highlight">192x192</span>) to ensure consistent accuracy across devices. Handles rotation, cropping, and color space conversion efficiently.',
+            
+            },
+            {
+                icon: '🤖',
+                title: 'TensorFlow Lite Inference',
+                content: 'Executes inference locally with <span class="highlight">TensorFlow Lite</span>, using <span class="highlight">NNAPI/GPU delegates</span> for acceleration. Supports quantized models for faster execution on mobile hardware.',
+            },
+            {
+                icon: '🎯',
+                title: 'Postprocessing Logic',
+                content: 'Converts raw model outputs into <span class="highlight">keypoint coordinates</span>, ready for fall detection logic. Applies confidence filtering and coordinate transformation.',
+            }
+        ];
+
+        function openPipelineModal(stepIndex) {
+            const data = pipelineData[stepIndex];
+            const overlay = document.getElementById('modalOverlay');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+
+            // Update modal content
+            icon.textContent = data.icon;
+            title.textContent = data.title;
+            content.innerHTML = `<p>${data.content}</p>`;
+
+            // Show modal
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Focus trap
+            const modal = document.getElementById('modal');
+            const closeButton = modal.querySelector('.modal-close');
+            closeButton.focus();
+        }
+
+        function closePipelineModal() {
+            const overlay = document.getElementById('modalOverlay');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on outside click
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closePipelineModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('modalOverlay');
+                if (overlay.classList.contains('active')) {
+                    closePipelineModal();
+                }
+            }
+        });
+
+        // Pills functionality
+        let activePill = -1;
+
+        function togglePill(pillIndex) {
+            const pills = document.querySelectorAll('.pill');
+            const contents = document.querySelectorAll('.pill-content');
+
+            // If clicking the same pill, close it
+            if (activePill === pillIndex) {
+                pills[pillIndex].classList.remove('active');
+                contents[pillIndex].classList.remove('active');
+                pills[pillIndex].setAttribute('aria-expanded', 'false');
+                activePill = -1;
+                return;
+            }
+
+            // Close previously active pill
+            if (activePill !== -1) {
+                pills[activePill].classList.remove('active');
+                contents[activePill].classList.remove('active');
+                pills[activePill].setAttribute('aria-expanded', 'false');
+            }
+
+            // Open new pill
+            pills[pillIndex].classList.add('active');
+            contents[pillIndex].classList.add('active');
+            pills[pillIndex].setAttribute('aria-expanded', 'true');
+            activePill = pillIndex;
+        }
+
+        // Global keyword highlighting function
+        function applyKeywordHighlighting() {
+            const keywords = [
+                '30 FPS', '192x192', 'TensorFlow Lite', 'NNAPI', 'GPU delegate', 'GPU delegates',
+                'Quantization', 'IMU Fusion', 'Postprocessing', 'keypoint coordinates',
+                'Frame Skipping', 'Buffer Reuse', 'Model Switching', 'GPU Acceleration',
+                'CameraX', 'BlazePose', 'MoveNet', 'YOLO-Pose', 'RTMPose',
+                'FP16', 'INT8', 'TFLite', 'NNAPI/GPU'
+            ];
+
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        // Skip script tags, style tags, and already highlighted content
+                        const parent = node.parentElement;
+                        if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE' ||
+                            parent.classList.contains('highlight')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+
+            textNodes.forEach(textNode => {
+                let text = textNode.textContent;
+                let hasChanges = false;
+
+                keywords.forEach(keyword => {
+                    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                    if (regex.test(text)) {
+                        text = text.replace(regex, `<span class="highlight">${keyword}</span>`);
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges) {
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = text;
+                    textNode.parentNode.replaceChild(wrapper, textNode);
+                }
+            });
+        }
+
+        // Keyboard navigation for accessibility
+        document.addEventListener('keydown', (e) => {
+            // Pipeline navigation
+            if (e.target.classList.contains('pipeline-step')) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const stepIndex = parseInt(e.target.getAttribute('data-step'));
+                    openPipelineModal(stepIndex);
+                }
+            }
+
+            // Pills navigation
+            if (e.target.classList.contains('pill')) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const pillIndex = Array.from(document.querySelectorAll('.pill')).indexOf(e.target);
+                    togglePill(pillIndex);
+                }
+            }
+        });
+
+        // Progress Bar Animation
+        function animateProgressBar() {
+            const progressFill = document.querySelector('.progress-fill');
+            const targetProgress = progressFill.getAttribute('data-progress');
+
+            setTimeout(() => {
+                progressFill.style.width = targetProgress + '%';
+            }, 500);
+        }
+
+        // Intersection Observer for Scroll Animations and Auto-Toasts
+        const observerOptions = {
+            threshold: 0.3,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+
+                    // Auto-trigger toast if element has data-toast attribute
+                    const toastMessage = entry.target.getAttribute('data-toast');
+                    if (toastMessage && !entry.target.dataset.toastTriggered) {
+                        setTimeout(() => {
+                            toastManager.show(toastMessage, 6000);
+                        }, 800);
+                        entry.target.dataset.toastTriggered = 'true';
+                    }
+
+                    // Special handling for mini-cards staggered animation
+                    if (entry.target.classList.contains('mini-cards')) {
+                        const cards = entry.target.querySelectorAll('.mini-card');
+                        cards.forEach((card, index) => {
+                            setTimeout(() => {
+                                card.classList.add('visible');
+                            }, index * 150);
+                        });
+                    }
+
+                    // Special handling for table rows
+                    if (entry.target.classList.contains('comparison-table')) {
+                        const rows = entry.target.querySelectorAll('tbody tr');
+                        rows.forEach((row, index) => {
+                            setTimeout(() => {
+                                row.style.opacity = '1';
+                                row.style.transform = 'translateY(0)';
+                            }, index * 100);
+                        });
+                    }
+                }
+            });
+        }, observerOptions);
+
+        // Bulb Button Click Handlers
+        function setupBulbButtons() {
+            const bulbButtons = document.querySelectorAll('.bulb-btn');
+            bulbButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const message = button.getAttribute('data-toast');
+                    if (message) {
+                        toastManager.show(message);
+                    }
+                });
+            });
+        }
+
+        // Enhanced Toast Animations
+        function enhanceToastAnimations() {
+            // Add staggered entrance for multiple toasts
+            const toastContainer = document.getElementById('toastContainer');
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.classList && node.classList.contains('toast')) {
+                                // Add entrance animation delay based on existing toasts
+                                const existingToasts = toastContainer.querySelectorAll('.toast').length;
+                                node.style.animationDelay = `${existingToasts * 0.1}s`;
+                            }
+                        });
+                    }
+                });
+            });
+            observer.observe(toastContainer, { childList: true });
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animate progress bar
+            animateProgressBar();
+
+            // Initialize carousel
+            updateCarousel();
+
+            // Apply keyword highlighting globally
+            applyKeywordHighlighting();
+
+            // Setup intersection observers
+            const elementsToObserve = document.querySelectorAll('.section-card, .comparison-table');
+            elementsToObserve.forEach(el => observer.observe(el));
+
+            // Setup bulb buttons
+            setupBulbButtons();
+
+            // Setup enhanced toast animations
+            enhanceToastAnimations();
+
+            // Initialize table row animations
+            const tableRows = document.querySelectorAll('.comparison-table tbody tr');
+            tableRows.forEach(row => {
+                row.style.opacity = '0';
+                row.style.transform = 'translateY(20px)';
+                row.style.transition = 'all 0.3s ease';
+            });
+
+            // Respect reduced motion preference
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelectorAll('*').forEach(el => {
+                    el.style.animation = 'none';
+                    el.style.transition = 'none';
+                });
+            }
+        });
+
+        // Keyboard navigation for bulb buttons
+        document.addEventListener('keydown', (e) => {
+            if (e.target.classList.contains('bulb-btn') && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                e.target.click();
+            }
+        });
+
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+
+            audio.onended = function() {
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            };
+        }
+
+        // Scroll-based bottom navigation and tutorial button
+        let nextTutorialUnlocked = false;
+        let bottomNavVisible = false;
+
+        function checkScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercentage = (scrollTop / documentHeight) * 100;
+
+            const bottomNav = document.querySelector('.bottom-nav');
+            const nextBtn = document.getElementById('nextTutorialBtn');
+            const btnText = document.getElementById('nextBtnText');
+
+            // Show bottom navigation when user scrolls 30% of the page
+            if (scrollPercentage >= 30 && !bottomNavVisible) {
+                bottomNavVisible = true;
+                bottomNav.classList.add('visible');
+            } else if (scrollPercentage < 30 && bottomNavVisible) {
+                bottomNavVisible = false;
+                bottomNav.classList.remove('visible');
+            }
+
+            // Enable next button when user scrolls 90% of the page
+            if (scrollPercentage >= 90 && !nextTutorialUnlocked) {
+                nextTutorialUnlocked = true;
+                nextBtn.classList.remove('disabled');
+                btnText.textContent = 'Next: Posture →';
+                nextBtn.style.animation = 'pulse 2s infinite';
+
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+            }
+        }
+
+        window.addEventListener('scroll', checkScrollProgress);
+
+        if (!document.querySelector('#pulseAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pulseAnimation';
+            style.textContent = `@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }`;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>

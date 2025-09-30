@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annotated Bibliography - CS663 Fall Detection Tutorial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #222;
+            background: #fff;
+            scroll-behavior: smooth;
+        }
+
+        /* Navigation - Same as index.html */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            padding: 0 2rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+
+        .nav-brand {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #222;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #222;
+            font-weight: 400;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: #0071e3;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: #222;
+            margin: 3px 0;
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 999;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 120px 2rem 4rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .page-header h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 1rem;
+        }
+
+        .page-header .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* Reference Cards */
+        .references {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .reference {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            scroll-margin-top: 100px; /* Account for fixed navbar */
+        }
+
+        .reference:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .reference:target {
+            background: #f0f8ff !important;
+            border: 2px solid #0071e3 !important;
+            animation: highlightPulse 2s ease-in-out;
+        }
+
+        @keyframes highlightPulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(0, 113, 227, 0.1); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 113, 227, 0); }
+        }
+
+        .reference-number {
+            display: inline-block;
+            background: #0071e3;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .reference-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #222;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        .reference-authors {
+            font-size: 1rem;
+            color: #555;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .reference-source {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .reference-url {
+            margin-bottom: 1rem;
+        }
+
+        .reference-url a {
+            color: #0071e3;
+            text-decoration: none;
+            font-size: 0.9rem;
+            word-break: break-all;
+            transition: color 0.3s ease;
+        }
+
+        .reference-url a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .reference-synopsis {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #444;
+            margin-bottom: 1rem;
+        }
+
+        .reference-reliability {
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .reliability-label {
+            font-weight: 600;
+            color: #222;
+        }
+
+        /* Final Note */
+        .final-note {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            border-left: 4px solid #0071e3;
+            margin-bottom: 3rem;
+        }
+
+        .final-note p {
+            font-size: 1rem;
+            color: #555;
+            margin: 0;
+            font-style: italic;
+        }
+
+        /* Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-nav {
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-nav {
+            background: #0071e3;
+            color: white;
+        }
+
+        .btn-nav:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f5f5f7;
+            color: #222;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8ed;
+        }
+
+        /* Footer */
+        footer {
+            background: #111;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .back-to-top {
+            color: #0071e3;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-to-top:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 100px 1rem 2rem;
+            }
+
+            .reference {
+                padding: 1.5rem;
+            }
+
+            .reference-title {
+                font-size: 1.1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html">Sensors</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="posture.html">Posture</a></li>
+                <li><a href="falllogic.html">Fall Logic</a></li>
+                <li><a href="emergency.html">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html" class="active">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">3 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/bibliography.mp3" preload="metadata"></audio>
+    </div>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Annotated Bibliography</h1>
+            <p class="subtitle">References cited throughout this tutorial.</p>
+        </div>
+
+        <div class="references">
+            <div class="reference" id="ref-1">
+                <div class="reference-number">1</div>
+                <div class="reference-title">A New Method for Real-Time Fall Detection Based on MediaPipe Pose Estimation and LSTM</div>
+                <div class="reference-authors">Sirikongtham, P., & Nimkoompai, A. (2025)</div>
+                <div class="reference-source">IJACSA, Vol. 16, No. 8</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://thesai.org/Downloads/Volume16No8/Paper_11-A_New_Method_for_Real_Time_Fall_Detection.pdf" target="_blank">https://thesai.org/Downloads/Volume16No8/Paper_11-A_New_Method_for_Real_Time_Fall_Detection.pdf</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> This peer-reviewed paper presents a fall detection system using MediaPipe Pose + LSTM for temporal motion analysis. Achieved 95.2% accuracy and 100% recall on the URFD dataset, outperforming CNN-based baselines.
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> High — peer-reviewed journal, validated with benchmark dataset.
+                </div>
+            </div>
+
+            <div class="reference" id="ref-2">
+                <div class="reference-number">2</div>
+                <div class="reference-title">Real-Time Human Fall Detection using a Lightweight Pose Estimation Technique</div>
+                <div class="reference-authors">Alam, E., Sufian, A., Dutta, P., & Leo, M. (2024)</div>
+                <div class="reference-source">arXiv:2401.01587</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://arxiv.org/abs/2401.01587" target="_blank">https://arxiv.org/abs/2401.01587</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> This paper uses MoveNet CNN for lightweight, on-device fall detection. Achieved 91.6% accuracy with low latency (~15 ms/frame). Demonstrates trade-off between speed and accuracy due to lack of temporal modeling.
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> Moderate — arXiv preprint, not peer-reviewed but widely cited.
+                </div>
+            </div>
+
+            <div class="reference" id="ref-3">
+                <div class="reference-number">3</div>
+                <div class="reference-title">Enhanced Fall Detection Using YOLOv7-W6-Pose for Real-Time Elderly Monitoring</div>
+                <div class="reference-authors">Tîrziu, E., Vasilevschi, A-M., Alexandru, A., & Tudora, E. (2024)</div>
+                <div class="reference-source">Future Internet, 16(12), 472</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://www.mdpi.com/1999-5903/16/12/472" target="_blank">https://www.mdpi.com/1999-5903/16/12/472</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> Proposes YOLO-pose architecture for fall detection, combining detection + pose estimation in one step. Shows potential for smart home monitoring systems.
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> High — peer-reviewed open-access journal (MDPI), real-time experiments included.
+                </div>
+            </div>
+
+            <div class="reference" id="ref-4">
+                <div class="reference-number">4</div>
+                <div class="reference-title">RTMPose: Real-Time Multi-Person Pose Estimation Based on MMPose</div>
+                <div class="reference-authors">Jiang, T., et al. (2023)</div>
+                <div class="reference-source">arXiv:2303.07399</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://arxiv.org/abs/2303.07399" target="_blank">https://arxiv.org/abs/2303.07399</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> Introduces RTMPose, an efficient state-of-the-art pose estimation model that balances accuracy and speed for mobile deployment. Relevant for next-gen fall detection pipelines.
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> Moderate to High — arXiv preprint, but by reputable MMPose team with strong benchmarks.
+                </div>
+            </div>
+
+            <div class="reference" id="ref-5">
+                <div class="reference-number">5</div>
+                <div class="reference-title">AI-Based Elderly Fall Prediction System Using Wearable Sensors: A Smart Home-Care Technology with IoT</div>
+                <div class="reference-authors">Kulurkar, P., Dixit, C.K., Bharathi, V.C., Monikavishnuvarthini, A., Dhakne, A., & Preethi, P. (2023)</div>
+                <div class="reference-source">Measurement: Sensors, 25, 100614</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://doi.org/10.1016/j.measen.2022.100614" target="_blank">https://doi.org/10.1016/j.measen.2022.100614</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> Describes a wearable IoT system for fall detection and prediction using accelerometers. Highlights trade-offs: accuracy vs user compliance (seniors may not wear devices consistently).
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> High — peer-reviewed Elsevier journal, rigorous experimental validation.
+                </div>
+            </div>
+
+            <div class="reference" id="ref-6">
+                <div class="reference-number">6</div>
+                <div class="reference-title">GPS and SMS Based Fall Detection & Tracking System</div>
+                <div class="reference-authors">Ahmed, A. (2021)</div>
+                <div class="reference-source">GitHub Project</div>
+                <div class="reference-url">
+                    <strong>URL:</strong> <a href="https://github.com/An7orAhmed/GPS-SMS-Fall-Detection--Tracking-System" target="_blank">https://github.com/An7orAhmed/GPS-SMS-Fall-Detection--Tracking-System</a>
+                </div>
+                <div class="reference-synopsis">
+                    <strong>Synopsis:</strong> Demonstrates a prototype that integrates fall detection with SMS + GPS emergency alerts. Provides practical insights into mobile alerting workflows.
+                </div>
+                <div class="reference-reliability">
+                    <span class="reliability-label">Reliability:</span> Moderate — open-source project, not peer-reviewed, but relevant for emergency response application layer.
+                </div>
+            </div>
+        </div>
+
+        <div class="final-note">
+            <p>All references above are hyper-linked throughout the tutorial as [1], [2], [3], etc. for consistency with academic review-paper style.</p>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="future.html" class="btn-nav btn-secondary">← Back: Future Work</a>
+            <a href="index.html" class="btn-nav">🎉 Tutorial Complete!</a>
+        </div>
+    </div>
+
+    <footer>
+        <p>CS663 Computer Vision | Fall 2025</p>
+        <a href="#top" class="back-to-top">Back to Top</a>
+    </footer>
+
+    <script>
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+
+            audio.onended = function() {
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            };
+        }
+    </script>
+
+    <script>
+        // Handle anchor scrolling when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            // Check if there's a hash in the URL
+            if (window.location.hash) {
+                setTimeout(function() {
+                    const target = document.querySelector(window.location.hash);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        // Add a highlight effect
+                        target.style.backgroundColor = '#f0f8ff';
+                        target.style.border = '2px solid #0071e3';
+                        target.style.transition = 'all 0.3s ease';
+
+                        // Remove highlight after 3 seconds
+                        setTimeout(function() {
+                            target.style.backgroundColor = '';
+                            target.style.border = '';
+                        }, 3000);
+                    }
+                }, 100);
+            }
+        });
+
+        // Handle clicks on citation links from other pages
+        window.addEventListener('hashchange', function() {
+            const target = document.querySelector(window.location.hash);
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                // Add highlight effect
+                target.style.backgroundColor = '#f0f8ff';
+                target.style.border = '2px solid #0071e3';
+                target.style.transition = 'all 0.3s ease';
+
+                setTimeout(function() {
+                    target.style.backgroundColor = '';
+                    target.style.border = '';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

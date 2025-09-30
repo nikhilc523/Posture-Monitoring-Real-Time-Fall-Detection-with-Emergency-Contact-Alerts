@@ -1,0 +1,3068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensors & Mobile Platform - CS663 Fall Detection Tutorial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #0071e3;
+            --text: #1d1d1f;
+            --secondary-text: #515154;
+            --muted: #86868b;
+            --bg: #fff;
+            --shadow: 0 8px 24px rgba(0,0,0,.08);
+            --border: #e9eef5;
+            --gradient-start: #f9fafc;
+            --gradient-end: #fff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Navigation - Match models.html style */
+        .nav-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            height: 60px;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            height: 100%;
+        }
+
+        .nav-brand {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--blue);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background: var(--text);
+            transition: 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .hamburger {
+                display: flex;
+            }
+        }
+
+        /* Reading Time & Audio Component */
+        .reading-info {
+            position: fixed;
+            top: 60px;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 1001;
+            font-size: 0.9rem;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .reading-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reading-time::before {
+            content: "📖";
+            font-size: 1rem;
+        }
+
+        .audio-button {
+            background: #0071e3;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .audio-button:hover {
+            background: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .audio-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Image Credits */
+        .image-credit {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--blue);
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .image-credit:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .credit-popup {
+            position: absolute;
+            bottom: 32px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(4px);
+            transition: all 0.2s ease;
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        .credit-popup::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            right: 12px;
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 4px solid rgba(0, 0, 0, 0.9);
+        }
+
+        .image-credit:hover .credit-popup {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .diagram-box {
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .reading-info {
+                position: relative;
+                top: 0;
+                right: 0;
+                margin: 1rem;
+                justify-content: center;
+            }
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            z-index: 997;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #515154;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 600px;
+            height: 4px;
+            background: #e5e5e7;
+            border-radius: 2px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 1.5s ease-out;
+        }
+
+        /* Title Section */
+        .title-section {
+            padding: 180px 2rem 80px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 113, 227, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .title-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1s ease 0.3s forwards;
+        }
+
+        .title-section h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .title-section .subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        /* Intro Section */
+        .intro-section {
+            padding: 4rem 2rem;
+            background: #fff;
+            text-align: center;
+        }
+
+        .intro-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .intro-section h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .intro-paragraph {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            margin-bottom: 3rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: left;
+        }
+
+        .intro-paragraph a {
+            color: var(--blue);
+            text-decoration: none;
+            margin-right: 0.25rem;
+        }
+
+        .sensor-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .category {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .category:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.1);
+        }
+
+        .category h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .category-title {
+            font-size: 1rem;
+            color: var(--blue);
+            font-weight: 600;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .category-description {
+            font-size: 0.95rem;
+            color: var(--secondary-text);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .research-note {
+            font-size: 1rem;
+            color: var(--muted);
+            font-style: italic;
+            margin-top: 2rem;
+        }
+
+        .research-note a {
+            color: var(--blue);
+            text-decoration: none;
+            margin-right: 0.25rem;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Sensor Carousel */
+        .carousel-section {
+            padding: 4rem 0;
+            position: relative;
+            background: #fff;
+        }
+
+        .carousel-container {
+            position: relative;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 4rem;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            gap: 2rem;
+        }
+
+        .sensor-card {
+            flex: 0 0 400px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f0f0f0;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            transform: scale(0.95);
+            cursor: pointer;
+        }
+
+        .sensor-card.active {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 12px 40px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.2);
+        }
+
+        .sensor-card:hover {
+            transform: scale(0.98) translateY(-6px);
+            box-shadow: 0 16px 48px rgba(0, 113, 227, 0.2);
+            border-color: rgba(0, 113, 227, 0.3);
+        }
+
+        .sensor-icon {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .sensor-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .sensor-title a {
+            color: var(--blue);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .sensor-tagline {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            line-height: 1.5;
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .carousel-nav:hover {
+            border-color: var(--blue);
+            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.15);
+        }
+
+        .carousel-nav.prev {
+            left: 1rem;
+        }
+
+        .carousel-nav.next {
+            right: 1rem;
+        }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--blue);
+            transform: scale(1.2);
+        }
+
+        /* Modal/Popup Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text);
+            font-size: 1.2rem;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.2);
+            transform: scale(1.1);
+        }
+
+        .modal-close:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--blue);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-icon {
+            font-size: 2.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .modal-content {
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-benefits,
+        .modal-limitations {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-benefits h4,
+        .modal-limitations h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-benefits ul,
+        .modal-limitations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .modal-benefits li,
+        .modal-limitations li {
+            padding: 0.5rem 0;
+            color: var(--secondary-text);
+            line-height: 1.5;
+        }
+
+        .modal-equation {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .modal-equation .equation {
+            font-family: 'Times New Roman', serif;
+            font-size: 1.25rem;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+            font-style: italic;
+        }
+
+        .modal-equation .equation-desc {
+            font-size: 0.95rem;
+            color: var(--secondary-text);
+            line-height: 1.4;
+        }
+
+        .modal-diagram {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            margin: 1.5rem 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .modal-diagram .diagram-placeholder {
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 0.75rem;
+        }
+
+        .modal-diagram .diagram-caption {
+            font-size: 0.9rem;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        /* Sensor Detail Sections */
+        .sensor-details {
+            background: #fff;
+            padding: 0;
+        }
+
+        .sensor-detail {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .sensor-detail.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .detail-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .sensor-detail h2 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .sensor-detail > .detail-container > p {
+            font-size: 1.25rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            text-align: center;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .component-list {
+            list-style: none;
+            padding: 0;
+            margin: 2rem 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .component-list li {
+            padding: 0.75rem 0;
+            font-size: 1.125rem;
+            color: var(--secondary-text);
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .component-list li:last-child {
+            border-bottom: none;
+        }
+
+        .benefits-limitations {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin: 3rem 0;
+        }
+
+        .benefits,
+        .limitations {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .benefits h4,
+        .limitations h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .benefits ul,
+        .limitations ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .benefits li,
+        .limitations li {
+            padding: 0.5rem 0;
+            color: var(--secondary-text);
+            line-height: 1.5;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .benefits li::before {
+            content: '•';
+            color: #28a745;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .limitations li::before {
+            content: '•';
+            color: #dc3545;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .equation-box {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .equation-box h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+        }
+
+        .equation {
+            font-family: 'Times New Roman', serif;
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .equation-desc {
+            font-size: 1rem;
+            color: var(--secondary-text);
+            line-height: 1.4;
+        }
+
+        /* Graduate-level enhancement styles */
+        .technical-explanation {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            border: 1px solid rgba(0, 113, 227, 0.15);
+            border-radius: 18px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .technical-explanation h3 {
+            color: var(--blue);
+            margin-bottom: 1.25rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 113, 227, 0.1);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 113, 227, 0.1);
+            font-size: 0.95rem;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, var(--blue) 0%, #0056b3 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(0, 113, 227, 0.05);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .applications {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 18px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .applications h3 {
+            color: var(--blue);
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .research-results {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 18px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .research-results h3 {
+            color: var(--secondary-text);
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .graduate-takeaway {
+            background: #f8f9fa;
+            border: 2px solid var(--blue);
+            border-radius: 18px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            box-shadow: 0 4px 20px rgba(0, 113, 227, 0.1);
+        }
+
+        .graduate-takeaway h3 {
+            color: var(--blue);
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .comparisons {
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .comparisons h3 {
+            color: var(--blue);
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .deployment-analysis {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+            border: 1px solid rgba(0, 113, 227, 0.15);
+            border-radius: 18px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .deployment-analysis h3 {
+            color: var(--blue);
+            margin-bottom: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Enhanced text styling for graduate sections */
+        .technical-explanation p,
+        .applications p,
+        .research-results p,
+        .graduate-takeaway p,
+        .applications ul li,
+        .research-results ul li {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .applications ul li strong,
+        .research-results ul li strong,
+        .technical-explanation strong,
+        .graduate-takeaway strong {
+            color: var(--blue);
+            font-weight: 600;
+        }
+
+        .diagram-box {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .diagram-placeholder {
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+        }
+
+        .diagram-caption {
+            font-size: 1rem;
+            color: var(--muted);
+            font-style: italic;
+            margin: 0;
+        }
+
+        .sensor-intro {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            color: var(--secondary-text);
+        }
+
+        .research-example {
+            background: #f0f8ff;
+            border-left: 4px solid var(--blue);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .research-example p {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .research-example a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        /* Deployment Timeline */
+        .deployment-section {
+            padding: 4rem 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e8f2ff 100%);
+            position: relative;
+        }
+
+        .deployment-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .deployment-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .deployment-intro {
+            font-size: 1.25rem;
+            color: var(--secondary-text);
+            max-width: 800px;
+            margin: 0 auto 4rem auto;
+            line-height: 1.6;
+        }
+
+        .deployment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .deployment-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .deployment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 113, 227, 0.1) 0%, rgba(0, 113, 227, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .deployment-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 113, 227, 0.15);
+            border-color: rgba(0, 113, 227, 0.3);
+        }
+
+        .deployment-card:hover::before {
+            opacity: 1;
+        }
+
+        .deployment-card.active {
+            background: rgba(0, 113, 227, 0.1);
+            border-color: var(--blue);
+            transform: translateY(-4px);
+        }
+
+        .deployment-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .deployment-title-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.75rem;
+        }
+
+        .deployment-description {
+            font-size: 0.95rem;
+            color: var(--secondary-text);
+            line-height: 1.5;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .deployment-card.active .deployment-description {
+            opacity: 1;
+            max-height: 200px;
+            margin-top: 1rem;
+        }
+
+        .deployment-specs {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 113, 227, 0.1);
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .deployment-card.active .deployment-specs {
+            opacity: 1;
+            max-height: 300px;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .spec-label {
+            color: var(--secondary-text);
+        }
+
+        .spec-value {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .deployment-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            margin-bottom: 0.5rem;
+            z-index: 10;
+        }
+
+        .deployment-item:hover .deployment-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .deployment-diagram {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .deployment-diagram .diagram-placeholder {
+            background: #fff;
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Summary Section */
+        .summary-section {
+            padding: 4rem 0;
+            background: linear-gradient(135deg, var(--blue) 0%, #00a8ff 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .summary-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .summary-text {
+            font-size: 1.25rem;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .summary-text .highlight {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .summary-encourage {
+            margin-top: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .summary-link {
+            color: white;
+            text-decoration: none;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .summary-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* Audio Section */
+        .audio-section {
+            padding: 1.5rem 0;
+            text-align: center;
+            background: #fff;
+        }
+
+        .audio-section h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .audio-section audio {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        /* Bottom Navigation - Compact */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 0.75rem 1.5rem;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .bottom-nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-buttons {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-primary, .btn-secondary {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #005bb5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-primary.disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .btn-primary.disabled:hover {
+            background: #ccc;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #f5f5f7;
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8ed;
+            transform: translateY(-2px);
+        }
+
+        /* Highlight Spans */
+        .highlight {
+            font-weight: 700;
+            color: #111;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .title-section {
+                padding: 160px 1rem 60px;
+            }
+
+            .carousel-container {
+                padding: 0 1rem;
+            }
+
+            .sensor-card {
+                flex: 0 0 300px;
+                padding: 1.5rem;
+            }
+
+            .carousel-nav {
+                width: 40px;
+                height: 40px;
+            }
+
+            .carousel-nav.prev {
+                left: 0.5rem;
+            }
+
+            .carousel-nav.next {
+                right: 0.5rem;
+            }
+
+            .deployment-timeline {
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .deployment-line {
+                display: none;
+            }
+
+            .deployment-item {
+                min-width: auto;
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .benefits-limitations {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .sensor-categories {
+                grid-template-columns: 1fr 1fr;
+                gap: 1.5rem;
+            }
+
+            .modal {
+                width: 95%;
+                padding: 2rem;
+                margin: 1rem;
+            }
+
+            .modal-title {
+                font-size: 1.5rem;
+            }
+
+            .modal-content {
+                font-size: 1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sensor-card {
+                flex: 0 0 280px;
+                padding: 1.25rem;
+            }
+
+            .sensor-title {
+                font-size: 1.25rem;
+            }
+
+            .sensor-tagline {
+                font-size: 0.9rem;
+            }
+
+            .deployment-item {
+                padding: 1rem;
+            }
+
+            .deployment-label {
+                font-size: 0.9rem;
+            }
+
+            .sensor-categories {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .detail-container {
+                padding: 2rem 1rem;
+            }
+
+            .sensor-detail h2 {
+                font-size: 2rem;
+            }
+
+            .equation {
+                font-size: 1.25rem;
+            }
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 5rem;
+        }
+
+        .page-header h1 {
+            font-size: clamp(3rem, 6vw, 4rem);
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.03em;
+        }
+
+        .page-header .subtitle {
+            font-size: 1.375rem;
+            color: #515154;
+            font-weight: 400;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.4;
+        }
+
+        /* Clean Apple-style Sections */
+        .section {
+            margin-bottom: 5rem;
+            padding: 0;
+            background: transparent;
+        }
+
+        .section h2 {
+            font-size: clamp(2rem, 4vw, 2.5rem);
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .section p {
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: #515154;
+            margin-bottom: 1.5rem;
+            max-width: 800px;
+        }
+
+        .section ul {
+            margin: 2rem 0;
+            padding: 0;
+            list-style: none;
+            max-width: 800px;
+        }
+
+        .section li {
+            font-size: 1.125rem;
+            color: #515154;
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .section li::before {
+            content: "•";
+            color: #0071e3;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Clean Image Placeholders */
+        .image-placeholder {
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            background: #f5f5f7;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 3rem auto;
+            border: none;
+        }
+
+        .image-placeholder span {
+            color: #86868b;
+            font-weight: 400;
+            font-size: 1rem;
+        }
+
+        .image-caption {
+            text-align: center;
+            color: #86868b;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 400;
+        }
+
+        /* Citations */
+        .citation {
+            color: #0071e3;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .citation:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        /* Clean Summary Section */
+        .summary {
+            background: #f5f5f7;
+            padding: 3rem;
+            border-radius: 18px;
+            margin: 4rem 0;
+            text-align: center;
+        }
+
+        .summary p {
+            font-size: 1.25rem;
+            color: #1d1d1f;
+            font-weight: 500;
+            line-height: 1.5;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Clean Audio Section */
+        .audio-section {
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .audio-section audio {
+            width: 100%;
+            max-width: 600px;
+            height: 54px;
+        }
+
+        /* Clean Apple-style Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 4rem 0;
+        }
+
+        .btn-nav {
+            padding: 0.875rem 1.5rem;
+            border-radius: 980px;
+            text-decoration: none;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1rem;
+            border: none;
+        }
+
+        .btn-nav {
+            background: #0071e3;
+            color: white;
+        }
+
+        .btn-nav:hover {
+            background: #0077ed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #0071e3;
+            border: 1px solid #d2d2d7;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f7;
+            border-color: #0071e3;
+        }
+
+        /* Footer */
+        footer {
+            background: #111;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .back-to-top {
+            color: #0071e3;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .back-to-top:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 100px 1rem 2rem;
+            }
+
+            .section {
+                padding: 2rem;
+            }
+
+            .section h2 {
+                font-size: 1.5rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+
+            .image-placeholder {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <div class="nav-content">
+            <a href="index.html" class="nav-brand">CS663 Computer Vision</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="sensors.html" class="active">Sensors</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="posture.html">Posture</a></li>
+                <li><a href="falllogic.html">Fall Logic</a></li>
+                <li><a href="emergency.html">Emergency</a></li>
+                <li><a href="limitations.html">Limitations</a></li>
+                <li><a href="bibliography.html">Bibliography</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Reading Time & Audio -->
+    <div class="reading-info">
+        <div class="reading-time">8 min read</div>
+        <button class="audio-button" onclick="toggleAudio()" title="Play audio narration">
+            <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+        <audio id="pageAudio" src="audio/sensors.mp3" preload="metadata"></audio>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-text">Step 2 of 8: Sensors & Mobile Platform</div>
+        <div class="progress-bar">
+            <div class="progress-fill" data-progress="20"></div>
+        </div>
+    </div>
+
+    <!-- Title Section -->
+    <section class="title-section">
+        <div class="title-content">
+            <h1>Sensors & Mobile Platform</h1>
+            <p class="subtitle">Vision-first sensing, optional wearable fusion, and mobile integration</p>
+        </div>
+    </section>
+
+    <!-- Intro Section -->
+    <section class="intro-section">
+        <div class="intro-content">
+            <h2>Multi-Layered Sensor Architecture</h2>
+            <p class="intro-paragraph">Fall detection on mobile devices is not driven by a single sensor, but by a collaboration of multiple sensor layers. Each layer contributes uniquely: input sensors capture raw data, output sensors provide user feedback, the Android platform integrates and processes signals, and the connectivity layer ensures caregivers are notified. This layered approach mirrors modern system design in research <a href="bibliography.html#ref-1">[1]</a><a href="bibliography.html#ref-5">[5]</a><a href="bibliography.html#ref-6">[6]</a>, ensuring robust, reliable monitoring for seniors.</p>
+
+            <div class="sensor-categories">
+                <div class="category">
+                    <h3>📡 Input Sensors</h3>
+                    <p class="category-title">Camera, IMU, Wearables</p>
+                    <p class="category-description">These provide raw data streams, including the smartphone <span class="highlight">RGB camera</span> (for pose estimation), <span class="highlight">IMU accelerometer and gyroscope</span> (for motion), and <span class="highlight">wearables</span> (continuous monitoring). Together, they establish the foundation for detecting falls.</p>
+                </div>
+                <div class="category">
+                    <h3>🔊 Output/Feedback</h3>
+                    <p class="category-title">Audio & Haptics</p>
+                    <p class="category-description">Speakers and vibration motors act as 'output sensors'—providing multimodal cues like <span class="highlight">voice prompts</span> and <span class="highlight">haptic buzzes</span> to alert seniors instantly.</p>
+                </div>
+                <div class="category">
+                    <h3>🤖 Platform</h3>
+                    <p class="category-title">Android stack (AI runtime)</p>
+                    <p class="category-description">The <span class="highlight">Android software stack</span> (CameraX, TensorFlow Lite, NNAPI, ForegroundService) integrates sensor streams and runs inference in real time. This layer ensures <span class="highlight">privacy-first processing</span> without cloud reliance.</p>
+                </div>
+                <div class="category">
+                    <h3>📡 Connectivity</h3>
+                    <p class="category-title">SMS/GPS emergency layer</p>
+                    <p class="category-description">The <span class="highlight">SMS/GPS emergency layer</span> sends alerts with location data using <span class="highlight">SmsManager</span>, ensuring timely caregiver intervention even if the app is running in the background.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sensor Carousel -->
+    <section class="carousel-section">
+        <div class="carousel-container">
+            <div class="carousel-nav prev" onclick="previousSensor()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+            <div class="carousel-nav next" onclick="nextSensor()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <div class="carousel-wrapper">
+                <div class="carousel-track" id="sensorCarouselTrack">
+                    <!-- Camera Card -->
+                    <div class="sensor-card active" onclick="showSensorDetail(0)">
+                        <span class="sensor-icon">📷</span>
+                        <h3 class="sensor-title">Camera <a href="bibliography.html#ref-1">[1]</a></h3>
+                        <p class="sensor-tagline">Primary vision sensor for fall detection</p>
+                    </div>
+
+                    <!-- IMU Sensors Card -->
+                    <div class="sensor-card" onclick="showSensorDetail(1)">
+                        <span class="sensor-icon">📐</span>
+                        <h3 class="sensor-title">IMU Sensors <a href="bibliography.html#ref-5">[5]</a></h3>
+                        <p class="sensor-tagline">Accelerometer & gyroscope for motion detection</p>
+                    </div>
+
+                    <!-- Audio & Haptics Card -->
+                    <div class="sensor-card" onclick="showSensorDetail(2)">
+                        <span class="sensor-icon">🔊</span>
+                        <h3 class="sensor-title">Audio & Haptics</h3>
+                        <p class="sensor-tagline">Voice prompts and vibration feedback</p>
+                    </div>
+
+                    <!-- Android Stack Card -->
+                    <div class="sensor-card" onclick="showSensorDetail(3)">
+                        <span class="sensor-icon">📱</span>
+                        <h3 class="sensor-title">Android Stack <a href="bibliography.html#ref-6">[6]</a></h3>
+                        <p class="sensor-tagline">CameraX, TensorFlow Lite, and real-time inference</p>
+                    </div>
+
+                    <!-- Wearable IoT Card -->
+                    <div class="sensor-card" onclick="showSensorDetail(4)">
+                        <span class="sensor-icon">⌚</span>
+                        <h3 class="sensor-title">Wearable IoT <a href="bibliography.html#ref-5">[5]</a></h3>
+                        <p class="sensor-tagline">Smart bands and watches for continuous monitoring</p>
+                    </div>
+
+                    <!-- SMS/GPS Card -->
+                    <div class="sensor-card" onclick="showSensorDetail(5)">
+                        <span class="sensor-icon">✉️</span>
+                        <h3 class="sensor-title">SMS/GPS <a href="bibliography.html#ref-6">[6]</a></h3>
+                        <p class="sensor-tagline">Emergency alerts with location data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Dots -->
+            <div class="carousel-dots">
+                <div class="dot active" onclick="goToSensor(0)"></div>
+                <div class="dot" onclick="goToSensor(1)"></div>
+                <div class="dot" onclick="goToSensor(2)"></div>
+                <div class="dot" onclick="goToSensor(3)"></div>
+                <div class="dot" onclick="goToSensor(4)"></div>
+                <div class="dot" onclick="goToSensor(5)"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sensor Detail Sections -->
+    <section class="sensor-details">
+        <!-- Camera Detail -->
+        <div class="sensor-detail active" id="sensor-detail-0">
+            <div class="detail-container">
+                <h2>📷 Camera</h2>
+                <p class="sensor-intro">The <span class="highlight">smartphone RGB camera</span> serves as the primary vision sensor for fall detection, capturing frames at approximately <span class="highlight">30 FPS</span> via <span class="highlight">CameraX</span>. This universal sensor provides spatial and appearance data essential for pose estimation algorithms. Unlike dedicated fall detection devices, smartphone cameras offer the advantage of being already present in every device, making them ideal for widespread deployment.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Pipeline</h3>
+                    <p>The camera processing pipeline follows: <strong>RGB frames</strong> → <strong>CameraX capture</strong> (~<strong>30 FPS</strong>) → <strong>preprocessing</strong> (resize to 256×256, normalize to [0,1]) → <strong>TensorFlow Lite</strong> inference → <strong>pose landmarks</strong> (17 keypoints) → <strong>temporal smoothing</strong> → <strong>fall detection logic</strong>. Processing latency averages <strong>33-50ms</strong> per frame on modern devices with <strong>NNAPI</strong> acceleration.</p>
+                </div>
+
+                <div class="comparisons">
+                    <h3>📊 Camera Technology Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Technology</th>
+                                <th>Accuracy</th>
+                                <th>Cost</th>
+                                <th>Privacy</th>
+                                <th>Lighting</th>
+                                <th>Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>RGB Camera</strong></td>
+                                <td>85-95%</td>
+                                <td>$0 (built-in)</td>
+                                <td>Moderate</td>
+                                <td>Daylight only</td>
+                                <td>2-5m</td>
+                            </tr>
+                            <tr>
+                                <td><strong>IR Camera</strong></td>
+                                <td>80-90%</td>
+                                <td>$50-100</td>
+                                <td>High</td>
+                                <td>All conditions</td>
+                                <td>3-8m</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Depth Sensor</strong></td>
+                                <td>90-98%</td>
+                                <td>$100-200</td>
+                                <td>High</td>
+                                <td>Indoor only</td>
+                                <td>1-4m</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use RGB Camera</h3>
+                    <ul>
+                        <li><strong>Low-cost ubiquity:</strong> Leveraging existing smartphone hardware for mass deployment</li>
+                        <li><strong>Daytime monitoring:</strong> Well-lit environments with consistent lighting (>300 lux)</li>
+                        <li><strong>Privacy-conscious users:</strong> On-device processing without cloud transmission</li>
+                        <li><strong>Posture analysis:</strong> Rich visual context for detailed body position assessment</li>
+                        <li><strong>Multi-person scenarios:</strong> Can distinguish between multiple individuals in frame</li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>MediaPipe + LSTM:</strong> Achieved <strong>95.2% accuracy</strong> in controlled environments <a href="bibliography.html#ref-1">[1]</a></li>
+                        <li><strong>MoveNet CNN:</strong> ~<strong>91.6% accuracy</strong> but confused sit-downs with falls <a href="bibliography.html#ref-2">[2]</a></li>
+                        <li><strong>Real-world deployment:</strong> <strong>87.3% precision</strong>, <strong>92.1% recall</strong> in senior living facilities <a href="bibliography.html#ref-3">[3]</a></li>
+                        <li><strong>Lighting impact:</strong> Accuracy drops to <strong>60-70%</strong> below 100 lux illumination</li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Universal availability</strong> in all smartphones</li>
+                            <li>Provides rich <strong>spatial and appearance data</strong> for pose estimation</li>
+                            <li>Works effectively in both indoor and outdoor environments</li>
+                            <li><strong>Cost effective:</strong> Zero additional hardware cost for basic implementation</li>
+                            <li><strong>High resolution:</strong> Modern cameras capture sufficient detail for reliable keypoint detection</li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>Low light performance:</strong> Accuracy drops to <strong>60-70%</strong> in dim conditions (<100 lux)</li>
+                            <li><strong>Occlusion sensitivity:</strong> Loose clothing or furniture can block keypoint detection</li>
+                            <li><strong>Pocket placement issues:</strong> Unstable orientation when phone is in pocket</li>
+                            <li><strong>Battery drain:</strong> Continuous camera processing consumes <strong>15-25%</strong> additional battery</li>
+                            <li><strong>Privacy concerns:</strong> Video capture raises user acceptance issues despite local processing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="equation-box">
+                    <h4>Field of View (FoV)</h4>
+                    <div class="equation">θ = 2 × arctan(d / 2f)</div>
+                    <p class="equation-desc">This formula calculates the camera's field of view, where <em>d</em> = sensor size and <em>f</em> = focal length. A wider field of view captures more of the scene for better fall detection coverage.</p>
+                </div>
+
+                <div class="diagram-box">
+                    <img src="images/smartphone-camera.png" alt="Smartphone camera system showing RGB capture and pose estimation with field of view visualization" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <p class="diagram-caption">Smartphone camera captures RGB frames for pose estimation</p>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓Takeaway</h3>
+                    <p>RGB cameras excel for <strong>cost-effective, ubiquitous deployment</strong> where lighting conditions are controlled and privacy concerns can be addressed through on-device processing. Choose RGB over alternatives when <strong>deployment scale</strong> and <strong>zero additional hardware cost</strong> outweigh the limitations of lighting dependency and privacy concerns. For clinical or high-accuracy applications requiring <strong>>95% accuracy</strong>, consider depth sensors; for 24/7 monitoring, IR cameras provide superior reliability in low-light conditions.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- IMU Sensors Detail -->
+        <div class="sensor-detail" id="sensor-detail-1">
+            <div class="detail-container">
+                <h2>📐 IMU Sensors</h2>
+                <p class="sensor-intro">IMUs (<span class="highlight">Inertial Measurement Units</span>) combine an <span class="highlight">accelerometer</span> and <span class="highlight">gyroscope</span> to measure linear acceleration and angular velocity. These sensors are embedded in all modern smartphones and wearables (like Wear OS smartwatches). In fall detection, they play a critical role in identifying sudden impacts or rapid changes in orientation when camera vision is unavailable or occluded.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Pipeline</h3>
+                    <p>IMU processing follows: <strong>Raw sensor data</strong> (accelerometer + gyroscope at <strong>100-200 Hz</strong>) → <strong>Low-pass filtering</strong> (Butterworth, fc=20Hz) → <strong>Magnitude calculation</strong> → <strong>Threshold detection</strong> (|a| > 2.5g for falls) → <strong>Temporal validation</strong> (sustained for >200ms) → <strong>Fusion with vision data</strong>. Modern smartphones use <strong>MEMS sensors</strong> with noise density ~150 μg/√Hz.</p>
+                </div>
+
+                <div class="comparisons">
+                    <h3>📊 IMU Platform Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th>Sampling Rate</th>
+                                <th>Accuracy</th>
+                                <th>Battery Impact</th>
+                                <th>Compliance</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Phone IMU</strong></td>
+                                <td>100-200 Hz</td>
+                                <td>75-85%</td>
+                                <td>Low (2-5%)</td>
+                                <td>High</td>
+                                <td>$0</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Wear OS IMU</strong></td>
+                                <td>50-100 Hz</td>
+                                <td>80-90%</td>
+                                <td>Medium (10-15%)</td>
+                                <td>Medium</td>
+                                <td>$150-300</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Pendant Device</strong></td>
+                                <td>25-50 Hz</td>
+                                <td>85-95%</td>
+                                <td>Low (weeks)</td>
+                                <td>Low</td>
+                                <td>$50-150</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use IMU Sensors</h3>
+                    <ul>
+                        <li><strong>Vision occlusion scenarios:</strong> When camera view is blocked by furniture or clothing</li>
+                        <li><strong>Low-light environments:</strong> Nighttime monitoring where RGB cameras fail</li>
+                        <li><strong>Battery-constrained devices:</strong> IMU consumes <strong>50x less power</strong> than continuous camera</li>
+                        <li><strong>Clinical validation:</strong> Medical-grade pendant devices for high-risk patients</li>
+                        <li><strong>Multi-modal fusion:</strong> Combining with vision for <strong>95%+ accuracy</strong></li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>Phone-only IMU:</strong> <strong>78.4% accuracy</strong> with high false positive rate from ADLs <a href="bibliography.html#ref-4">[4]</a></li>
+                        <li><strong>Wearable IMU:</strong> <strong>89.2% accuracy</strong> but compliance issues in 35% of seniors <a href="bibliography.html#ref-5">[5]</a></li>
+                        <li><strong>IMU + Vision fusion:</strong> <strong>96.1% accuracy</strong>, reduces false negatives by 40% <a href="bibliography.html#ref-6">[6]</a></li>
+                        <li><strong>Threshold optimization:</strong> 2.5g threshold balances sensitivity vs specificity optimally</li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Continuous monitoring:</strong> Works 24/7 regardless of lighting conditions</li>
+                            <li><strong>Low power consumption:</strong> <2-5% battery impact for background monitoring</li>
+                            <li><strong>Immediate impact detection:</strong> Responds within <strong>100-200ms</strong> of fall event</li>
+                            <li><strong>Privacy preserving:</strong> No visual data, only motion signatures</li>
+                            <li><strong>Robust to occlusion:</strong> Functions when camera view is blocked</li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>High false positive rate:</strong> Normal activities (sitting, exercise) trigger alerts</li>
+                            <li><strong>Sensor noise and drift:</strong> Requires sophisticated filtering and calibration</li>
+                            <li><strong>Compliance issues:</strong> Wearables not worn by <strong>35%</strong> of seniors consistently</li>
+                            <li><strong>Placement sensitivity:</strong> Phone orientation affects detection accuracy</li>
+                            <li><strong>Limited context:</strong> Cannot distinguish intentional vs accidental movements</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="equation-box">
+                    <h4>Acceleration Magnitude</h4>
+                    <div class="equation">|a| = √(ax² + ay² + az²)</div>
+                    <p class="equation-desc">This formula calculates the net acceleration magnitude from 3-axis accelerometer data. Sudden spikes often correlate with falls.</p>
+                </div>
+
+                <div class="diagram-box">
+                    <img src="images/imu-sensor.png" alt="IMU sensor cutaway diagram showing 3D coordinate axes, accelerometer and gyroscope components" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <p class="diagram-caption">IMU sensors capture motion signals to complement vision</p>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓Takeaway</h3>
+                    <p>IMU sensors are optimal for <strong>continuous, low-power monitoring</strong> and essential for <strong>multi-modal fusion systems</strong> targeting >95% accuracy. Choose phone IMU for <strong>ubiquitous deployment</strong> with acceptable 75-85% accuracy, wearable IMU for <strong>clinical applications</strong> requiring higher precision, and pendant devices for <strong>high-risk patients</strong> where compliance can be ensured. Always combine with vision when computational resources allow, as fusion reduces false negatives by 40% while maintaining privacy.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio & Haptics Detail -->
+        <div class="sensor-detail" id="sensor-detail-2">
+            <div class="detail-container">
+                <h2>🔊 Audio & Haptics</h2>
+                <p class="sensor-intro">Audio and haptic systems serve as <span class="highlight">output channels</span> that provide immediate feedback to users. Speakers deliver <span class="highlight">voice prompts</span> like "Fall detected" or "Please sit upright," while vibration motors provide <span class="highlight">haptic alerts</span>. This multimodal approach is critical for accessibility, offering hands-free and eyes-free interaction that's especially important for seniors who may have visual or hearing impairments.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Pipeline</h3>
+                    <p>Audio/haptic feedback follows: <strong>Fall detection trigger</strong> → <strong>TextToSpeech API</strong> (Android TTS engine) → <strong>AudioManager</strong> (volume adjustment for hearing aids) → <strong>Vibrator service</strong> (pattern: 200ms on, 100ms off, repeat 3x) → <strong>User response detection</strong> → <strong>Escalation logic</strong>. Audio output uses <strong>STREAM_ALARM</strong> to bypass Do Not Disturb settings.</p>
+                </div>
+
+                <div class="comparisons">
+                    <h3>📊 Feedback Modality Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Modality</th>
+                                <th>Response Time</th>
+                                <th>Accessibility</th>
+                                <th>Environment Impact</th>
+                                <th>Battery Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Audio (TTS)</strong></td>
+                                <td>500-800ms</td>
+                                <td>High (hearing)</td>
+                                <td>Noise sensitive</td>
+                                <td>Medium</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Haptic Vibration</strong></td>
+                                <td>50-100ms</td>
+                                <td>High (touch)</td>
+                                <td>Environment independent</td>
+                                <td>Low</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Visual Alert</strong></td>
+                                <td>100-200ms</td>
+                                <td>Medium (vision)</td>
+                                <td>Lighting dependent</td>
+                                <td>High</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use Audio & Haptics</h3>
+                    <ul>
+                        <li><strong>Accessibility compliance:</strong> WCAG 2.1 AA requires multi-modal feedback</li>
+                        <li><strong>Immediate intervention:</strong> Pre-fall alerts for posture correction</li>
+                        <li><strong>Emergency confirmation:</strong> "Are you okay?" dialogs with countdown</li>
+                        <li><strong>Hearing aid compatibility:</strong> Audio routing through assistive devices</li>
+                        <li><strong>Silent environments:</strong> Haptic-only feedback in libraries, hospitals</li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>Multi-modal effectiveness:</strong> <strong>89% user response rate</strong> vs 67% visual-only</li>
+                        <li><strong>Response time:</strong> Audio alerts reduce confirmation time by <strong>2.3 seconds</strong> average</li>
+                        <li><strong>Accessibility impact:</strong> <strong>94% satisfaction</strong> among hearing-impaired users with haptic feedback</li>
+                        <li><strong>False alarm reduction:</strong> Voice confirmation reduces false positives by <strong>78%</strong></li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Hands-free</strong> and <strong>eyes-free</strong> operation for seniors</li>
+                            <li><strong>Multi-modal feedback</strong> accommodates different accessibility needs</li>
+                            <li><strong>Immediate alerts</strong> can prompt corrective action before falls occur</li>
+                            <li><strong>WCAG compliance:</strong> Meets accessibility standards for assistive technology</li>
+                            <li><strong>Low latency:</strong> Haptic response within <strong>50-100ms</strong></li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>Noisy environments:</strong> Audio effectiveness drops below <strong>60dB SNR</strong></li>
+                            <li><strong>Hearing impairments:</strong> 23% of seniors have significant hearing loss</li>
+                            <li><strong>Subtle vibrations:</strong> May not be felt through thick clothing or pockets</li>
+                            <li><strong>Battery drain:</strong> TTS and vibration consume <strong>5-8%</strong> additional power</li>
+                            <li><strong>Social acceptability:</strong> Audio alerts may cause embarrassment in public</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓Takeaway</h3>
+                    <p>Audio and haptic feedback are <strong>essential for accessibility compliance</strong> and significantly improve user response rates in fall detection systems. Use <strong>multi-modal approaches</strong> (audio + haptic) to accommodate diverse user needs and environmental conditions. Prioritize haptic feedback for <strong>immediate response</strong> (50-100ms latency) and audio for <strong>complex instructions</strong>. In clinical deployments, ensure compatibility with hearing aids and consider <strong>social acceptability</strong> factors that may affect user compliance.</p>
+                </div>
+
+                <div class="diagram-box">
+                    <img src="images/audio-haptic.png" alt="Cross-section view of smartphone showing speaker system and haptic motor with sound waves and vibration patterns" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <p class="diagram-caption">Speakers and vibration motors provide multi-modal feedback</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Android Stack Detail -->
+        <div class="sensor-detail" id="sensor-detail-3">
+            <div class="detail-container">
+                <h2>📱 Android Stack</h2>
+                <p class="sensor-intro">The <span class="highlight">Android software stack</span> serves as the integration platform that combines camera input, machine learning inference, and emergency communication. This comprehensive platform includes <span class="highlight">CameraX</span> for low-latency frame capture, <span class="highlight">TensorFlow Lite</span> for on-device pose estimation, and <span class="highlight">SmsManager</span> for emergency alerts. The privacy-first design ensures all processing happens locally without cloud dependencies.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Architecture</h3>
+                    <p>Android integration follows: <strong>CameraX</strong> (frame capture) → <strong>ImageAnalysis</strong> (preprocessing) → <strong>TensorFlow Lite</strong> (pose inference with <strong>NNAPI</strong> acceleration) → <strong>ForegroundService</strong> (background processing) → <strong>SmsManager</strong> (emergency alerts) → <strong>LocationManager</strong> (GPS coordinates). Processing latency: <strong>33-50ms</strong> per frame on Snapdragon 8-series with dedicated <strong>NPU</strong>.</p>
+                </div>
+
+                <ul class="component-list">
+                    <li><span class="highlight">CameraX API</span> → Provides low-latency frame capture at ~30 FPS with automatic focus and exposure control</li>
+                    <li><span class="highlight">TensorFlow Lite</span> → Enables on-device pose estimation inference without cloud dependencies</li>
+                    <li><span class="highlight">NNAPI/GPU Delegate</span> → Hardware acceleration for faster ML model execution</li>
+                    <li><span class="highlight">ForegroundService</span> → Ensures continuous monitoring even when app is in background</li>
+                    <li><span class="highlight">SmsManager API</span> → Sends emergency SMS alerts with GPS coordinates to caregivers</li>
+                </ul>
+
+                <div class="comparisons">
+                    <h3>📊 ML Runtime Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Runtime</th>
+                                <th>Inference Speed</th>
+                                <th>Model Size</th>
+                                <th>Hardware Support</th>
+                                <th>Platform</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>TensorFlow Lite</strong></td>
+                                <td>33-50ms</td>
+                                <td>2-8MB</td>
+                                <td>CPU, GPU, NPU</td>
+                                <td>Android, iOS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ONNX Runtime</strong></td>
+                                <td>28-45ms</td>
+                                <td>3-10MB</td>
+                                <td>CPU, GPU</td>
+                                <td>Cross-platform</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Core ML</strong></td>
+                                <td>25-40ms</td>
+                                <td>1-5MB</td>
+                                <td>ANE, GPU</td>
+                                <td>iOS only</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use Android Stack</h3>
+                    <ul>
+                        <li><strong>Privacy-first deployment:</strong> On-device processing without cloud dependencies</li>
+                        <li><strong>Real-time requirements:</strong> <50ms inference latency with NNAPI acceleration</li>
+                        <li><strong>Comprehensive integration:</strong> Camera, ML, GPS, SMS in single platform</li>
+                        <li><strong>Background monitoring:</strong> ForegroundService for 24/7 operation</li>
+                        <li><strong>Wide device support:</strong> Android 7.0+ covers 85% of active devices</li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>TensorFlow Lite optimization:</strong> <strong>40% faster</strong> inference with GPU delegate vs CPU-only</li>
+                        <li><strong>Battery efficiency:</strong> NNAPI reduces power consumption by <strong>25-30%</strong> vs software inference</li>
+                        <li><strong>Device compatibility:</strong> <strong>92% success rate</strong> across Android 8.0+ devices</li>
+                        <li><strong>SMS delivery reliability:</strong> <strong>98.7% delivery rate</strong> with SmsManager fallback to Intent</li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Privacy-first</strong> design with all processing on-device</li>
+                            <li><strong>Hardware acceleration</strong> support via NNAPI and GPU delegates</li>
+                            <li><strong>Comprehensive API ecosystem</strong> for sensor integration</li>
+                            <li><strong>Background processing</strong> with ForegroundService for continuous monitoring</li>
+                            <li><strong>Wide device support</strong> across Android 7.0+ (85% market coverage)</li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>Device fragmentation:</strong> Performance varies across manufacturers and chipsets</li>
+                            <li><strong>Android version compatibility:</strong> NNAPI requires Android 8.1+ for full features</li>
+                            <li><strong>Play Store SMS restrictions:</strong> New policies limit SMS permissions for non-messaging apps</li>
+                            <li><strong>Battery optimization conflicts:</strong> Doze mode can interrupt background services</li>
+                            <li><strong>Hardware dependency:</strong> NPU availability varies by device tier</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓Takeaway</h3>
+                    <p>Android provides the most <strong>comprehensive platform</strong> for fall detection with integrated camera, ML, and communication APIs. Choose Android when <strong>privacy</strong> (on-device processing) and <strong>cost-effectiveness</strong> (existing hardware) are priorities. Use <strong>TensorFlow Lite with NNAPI</strong> for optimal performance, but implement fallbacks for older devices. Consider <strong>Play Store policy compliance</strong> for SMS permissions and plan for <strong>device fragmentation</strong> testing across major manufacturers (Samsung, Google, OnePlus).</p>
+                </div>
+
+                <div class="diagram-box">
+                    <img src="images/android-stack.png" alt="Android software stack architecture showing layers from hardware to emergency response with data flow arrows" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <p class="diagram-caption">Android combines sensors, AI inference, and emergency services</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wearable IoT Detail -->
+        <div class="sensor-detail" id="sensor-detail-4">
+            <div class="detail-container">
+                <h2>⌚ Wearable IoT</h2>
+                <p class="sensor-intro"><span class="highlight">Smart bands and watches</span> provide continuous monitoring through embedded accelerometers, gyroscopes, and heart rate sensors. These wearable devices complement smartphone-based fall detection by offering <span class="highlight">continuous acceleration monitoring</span> and <span class="highlight">vital signs tracking</span>. Popular platforms like <span class="highlight">Wear OS</span> enable seamless integration with Android smartphones, creating a comprehensive monitoring ecosystem.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Pipeline</h3>
+                    <p>Wearable processing follows: <strong>MEMS sensors</strong> (accelerometer + gyroscope at <strong>50-100 Hz</strong>) → <strong>Wear OS Health Services</strong> → <strong>On-device ML</strong> (lightweight CNN, <2MB) → <strong>Bluetooth LE</strong> communication to phone → <strong>Data fusion</strong> with camera → <strong>Emergency workflow</strong>. Battery optimization uses <strong>sensor batching</strong> and <strong>adaptive sampling</strong> (25Hz idle, 100Hz active).</p>
+                </div>
+
+                <div class="comparisons">
+                    <h3>📊 Wearable Platform Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th>Battery Life</th>
+                                <th>Sensors</th>
+                                <th>ML Capability</th>
+                                <th>Integration</th>
+                                <th>Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Wear OS</strong></td>
+                                <td>1-2 days</td>
+                                <td>IMU, HR, GPS</td>
+                                <td>TensorFlow Lite</td>
+                                <td>Native Android</td>
+                                <td>$150-400</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Apple Watch</strong></td>
+                                <td>1-2 days</td>
+                                <td>IMU, HR, ECG</td>
+                                <td>Core ML</td>
+                                <td>iOS only</td>
+                                <td>$200-500</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Fitbit</strong></td>
+                                <td>5-7 days</td>
+                                <td>IMU, HR</td>
+                                <td>Limited</td>
+                                <td>API only</td>
+                                <td>$100-300</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use Wearables</h3>
+                    <ul>
+                        <li><strong>Clinical long-term monitoring:</strong> Continuous data collection for medical research</li>
+                        <li><strong>High-risk patients:</strong> Post-surgery or mobility-impaired individuals</li>
+                        <li><strong>Multi-modal fusion:</strong> Combining with phone sensors for >95% accuracy</li>
+                        <li><strong>Privacy-enhanced detection:</strong> No camera required, motion-only analysis</li>
+                        <li><strong>24/7 monitoring:</strong> Works during sleep, shower (waterproof models)</li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>Wearable-only accuracy:</strong> <strong>89.2% sensitivity</strong>, <strong>94.1% specificity</strong> <a href="bibliography.html#ref-5">[5]</a></li>
+                        <li><strong>Compliance rates:</strong> <strong>65% consistent wear</strong> among seniors, <strong>85%</strong> among younger adults</li>
+                        <li><strong>Battery optimization:</strong> Adaptive sampling extends battery life by <strong>40-60%</strong></li>
+                        <li><strong>Fusion benefits:</strong> Phone + wearable reduces false negatives by <strong>35%</strong> <a href="bibliography.html#ref-6">[6]</a></li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Continuous monitoring:</strong> 24/7 operation regardless of phone location</li>
+                            <li><strong>Camera-independent:</strong> Works in all lighting and privacy conditions</li>
+                            <li><strong>Personal device:</strong> Travels with user, not location-dependent</li>
+                            <li><strong>Multi-sensor fusion:</strong> IMU + heart rate + skin temperature</li>
+                            <li><strong>Low latency:</strong> On-wrist processing with <100ms response time</li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>Battery drain:</strong> Continuous monitoring reduces battery life by <strong>40-60%</strong></li>
+                            <li><strong>Compliance issues:</strong> <strong>35% of seniors</strong> forget to wear consistently</li>
+                            <li><strong>Social stigma:</strong> Medical alert appearance may reduce adoption</li>
+                            <li><strong>False positives:</strong> Exercise and daily activities trigger alerts</li>
+                            <li><strong>Cost barrier:</strong> Additional $150-400 hardware investment required</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓Takeaway</h3>
+                    <p>Wearables are optimal for <strong>clinical applications</strong> and <strong>high-risk patients</strong> where compliance can be ensured and continuous monitoring justifies the cost. Use Wear OS for <strong>Android ecosystem integration</strong>, Apple Watch for <strong>iOS users</strong>, and Fitbit for <strong>battery-optimized</strong> long-term studies. Always implement <strong>multi-modal fusion</strong> with phone sensors when possible, as this reduces false negatives by 35% while maintaining the privacy benefits of motion-only analysis.</p>
+                </div>
+
+                <div class="diagram-box">
+                    <img src="images/wearable-sensor.png" alt="Smartwatch on wrist showing fall detection interface with IMU sensors and wireless connectivity to smartphone" style="width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                    <div class="image-credit">
+                        <span>AI</span>
+                        <div class="credit-popup">Generated by Gemini</div>
+                    </div>
+                    <p class="diagram-caption">Wearable IoT sensors offer camera-independent detection</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SMS/GPS Detail -->
+        <div class="sensor-detail" id="sensor-detail-5">
+            <div class="detail-container">
+                <h2>✉️ SMS/GPS</h2>
+                <p class="sensor-intro">The <span class="highlight">SMS/GPS connectivity layer</span> serves as the critical bridge between fall detection and emergency response. When a fall is detected, the <span class="highlight">SmsManager API</span> automatically sends text messages to pre-configured caregivers with precise <span class="highlight">GPS coordinates</span>. For example: "Fall detected at <span class="highlight">37.7749° N, 122.4194° W</span>". This system ensures timely intervention even when the user cannot manually call for help.</p>
+
+                <div class="technical-explanation">
+                    <h3>🔧 Technical Pipeline</h3>
+                    <p>Emergency communication follows: <strong>Fall detection trigger</strong> → <strong>LocationManager</strong> (GPS/Network location, accuracy ±3-5m) → <strong>SmsManager.sendTextMessage()</strong> → <strong>Delivery confirmation</strong> → <strong>Fallback to Intent</strong> (if SmsManager fails) → <strong>Retry logic</strong> (3 attempts, 30s intervals). Message format: "FALL ALERT: [Name] detected at [coordinates] [timestamp]. Respond SAFE to cancel."</p>
+                </div>
+
+                <div class="comparisons">
+                    <h3>📊 Communication Method Comparison</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Delivery Time</th>
+                                <th>Reliability</th>
+                                <th>Setup Complexity</th>
+                                <th>Cost</th>
+                                <th>Permissions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>SmsManager</strong></td>
+                                <td>2-10 seconds</td>
+                                <td>98.7%</td>
+                                <td>Low</td>
+                                <td>SMS rates</td>
+                                <td>SEND_SMS</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Intent (SMS)</strong></td>
+                                <td>5-15 seconds</td>
+                                <td>99.2%</td>
+                                <td>Low</td>
+                                <td>SMS rates</td>
+                                <td>None</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Server Relay</strong></td>
+                                <td>1-5 seconds</td>
+                                <td>99.8%</td>
+                                <td>High</td>
+                                <td>Data + server</td>
+                                <td>INTERNET</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="applications">
+                    <h3>🎯 When to Use SMS/GPS</h3>
+                    <ul>
+                        <li><strong>Direct caregiver alerts:</strong> Family members with immediate response capability</li>
+                        <li><strong>Rural/remote areas:</strong> Where cellular coverage exists but internet is limited</li>
+                        <li><strong>Privacy-conscious users:</strong> No cloud servers, direct device-to-device communication</li>
+                        <li><strong>Emergency services integration:</strong> Automated 911 dispatch with location</li>
+                        <li><strong>Multi-contact redundancy:</strong> Primary + backup caregivers for reliability</li>
+                    </ul>
+                </div>
+
+                <div class="research-results">
+                    <h3>📈 Research Performance</h3>
+                    <ul>
+                        <li><strong>SMS delivery reliability:</strong> <strong>98.7% success rate</strong> with SmsManager, <strong>99.2%</strong> with Intent fallback</li>
+                        <li><strong>Location accuracy:</strong> GPS provides <strong>±3-5m accuracy</strong>, Network location ±10-50m</li>
+                        <li><strong>Response time improvement:</strong> <strong>4.2 minutes faster</strong> emergency response vs manual calls</li>
+                        <li><strong>False alarm management:</strong> "SAFE" response reduces unnecessary dispatches by <strong>89%</strong></li>
+                    </ul>
+                </div>
+
+                <div class="benefits-limitations">
+                    <div class="benefits">
+                        <h4>✅ Benefits</h4>
+                        <ul>
+                            <li><strong>Instant notification:</strong> 2-10 second delivery to caregivers</li>
+                            <li><strong>Precise location sharing:</strong> GPS coordinates with ±3-5m accuracy</li>
+                            <li><strong>Universal compatibility:</strong> Works with any cellular-enabled device</li>
+                            <li><strong>No internet dependency:</strong> Functions with basic cellular connectivity</li>
+                            <li><strong>Multi-contact support:</strong> Alerts multiple caregivers simultaneously</li>
+                        </ul>
+                    </div>
+                    <div class="limitations">
+                        <h4>⚠️ Limitations</h4>
+                        <ul>
+                            <li><strong>Permission restrictions:</strong> Play Store limits SEND_SMS for non-messaging apps</li>
+                            <li><strong>Cellular dependency:</strong> Fails in areas with no mobile signal coverage</li>
+                            <li><strong>SMS costs:</strong> Carrier charges apply for each message sent</li>
+                            <li><strong>Contact management:</strong> Requires manual setup and maintenance of caregiver list</li>
+                            <li><strong>Delivery confirmation:</strong> No guarantee message was read by recipient</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="graduate-takeaway">
+                    <h3>🎓 Takeaway</h3>
+                    <p>SMS/GPS provides the most <strong>reliable emergency communication</strong> with minimal infrastructure dependencies, making it ideal for <strong>rural deployment</strong> and <strong>privacy-conscious applications</strong>. Use <strong>SmsManager with Intent fallback</strong> for maximum delivery reliability, implement <strong>multi-contact redundancy</strong> for critical applications, and consider <strong>server relay systems</strong> for enterprise deployments requiring delivery confirmation and analytics. Always plan for <strong>Play Store policy compliance</strong> regarding SMS permissions.</p>
+                </div>
+
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- Deployment Scenarios -->
+    <section class="deployment-section">
+        <div class="deployment-container">
+            <h2 class="deployment-title">Practical Deployment Configurations</h2>
+            <p class="deployment-intro">How the smartphone is carried or mounted affects sensor performance. Research emphasizes that placement determines sensitivity and false positive rates.</p>
+
+            <div class="deployment-analysis">
+                <h3>📊 Placement vs Accuracy Analysis</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Placement</th>
+                            <th>Accuracy</th>
+                            <th>False Positives</th>
+                            <th>User Comfort</th>
+                            <th>Battery Impact</th>
+                            <th>Best Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Chest Mount</strong></td>
+                            <td>94-97%</td>
+                            <td>5-8%</td>
+                            <td>Good</td>
+                            <td>Standard</td>
+                            <td>Clinical monitoring</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Shirt Pocket</strong></td>
+                            <td>87-92%</td>
+                            <td>12-18%</td>
+                            <td>Excellent</td>
+                            <td>Standard</td>
+                            <td>Daily wear</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pants Pocket</strong></td>
+                            <td>75-85%</td>
+                            <td>20-30%</td>
+                            <td>Excellent</td>
+                            <td>High (muffled)</td>
+                            <td>Casual monitoring</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Lanyard</strong></td>
+                            <td>89-94%</td>
+                            <td>8-15%</td>
+                            <td>Fair</td>
+                            <td>Standard</td>
+                            <td>Senior care facilities</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="deployment-grid">
+                <div class="deployment-card" onclick="toggleDeploymentCard(this)">
+                    <span class="deployment-icon">👕</span>
+                    <h3 class="deployment-title-text">Chest Mount</h3>
+                    <div class="deployment-description">
+                        Most stable configuration, ideal for continuous walking monitoring. Provides consistent camera angle and minimal movement artifacts.
+                    </div>
+                    <div class="deployment-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Stability:</span>
+                            <span class="spec-value">Excellent</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">False Positives:</span>
+                            <span class="spec-value">Low</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">User Comfort:</span>
+                            <span class="spec-value">Good</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Best For:</span>
+                            <span class="spec-value">Walking, Exercise</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="deployment-card" onclick="toggleDeploymentCard(this)">
+                    <span class="deployment-icon">👔</span>
+                    <h3 class="deployment-title-text">Shirt Pocket</h3>
+                    <div class="deployment-description">
+                        Lightweight and convenient but prone to occlusion when arms cross the body. Suitable for basic monitoring scenarios.
+                    </div>
+                    <div class="deployment-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Stability:</span>
+                            <span class="spec-value">Moderate</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">False Positives:</span>
+                            <span class="spec-value">Medium</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">User Comfort:</span>
+                            <span class="spec-value">Excellent</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Best For:</span>
+                            <span class="spec-value">Daily Activities</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="deployment-card" onclick="toggleDeploymentCard(this)">
+                    <span class="deployment-icon">🪑</span>
+                    <h3 class="deployment-title-text">Desk/Table Mount</h3>
+                    <div class="deployment-description">
+                        Useful for seated posture monitoring in home or office environments. Fixed position ensures consistent field of view.
+                    </div>
+                    <div class="deployment-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Stability:</span>
+                            <span class="spec-value">Excellent</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">False Positives:</span>
+                            <span class="spec-value">Very Low</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">User Comfort:</span>
+                            <span class="spec-value">Excellent</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Best For:</span>
+                            <span class="spec-value">Seated Work</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="deployment-card" onclick="toggleDeploymentCard(this)">
+                    <span class="deployment-icon">📱⌚</span>
+                    <h3 class="deployment-title-text">Phone + Wear OS</h3>
+                    <div class="deployment-description">
+                        Combines IMU + vision data streams, reducing false positives through sensor fusion algorithms.
+                    </div>
+                    <div class="deployment-specs">
+                        <div class="spec-item">
+                            <span class="spec-label">Stability:</span>
+                            <span class="spec-value">Excellent</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">False Positives:</span>
+                            <span class="spec-value">Very Low</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">User Comfort:</span>
+                            <span class="spec-value">Good</span>
+                        </div>
+                        <div class="spec-item">
+                            <span class="spec-label">Best For:</span>
+                            <span class="spec-value">All Activities</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Summary Section -->
+    <section class="summary-section">
+        <div class="summary-content">
+            <p class="summary-text">
+                By combining the <span class="highlight">camera [1]</span>, <span class="highlight">IMU [5]</span>, <span class="highlight">wearables [5]</span>, and the <span class="highlight">Android + SMS stack [6]</span>, smartphones evolve into privacy-first fall detection assistants for seniors. This multi-layered approach ensures robust monitoring while maintaining user privacy through on-device processing.
+            </p>
+            <p class="summary-encourage">
+                <a href="bibliography.html" class="summary-link">Explore the research bibliography →</a>
+            </p>
+        </div>
+    </section>
+
+    <!-- Audio Narration -->
+    <section class="audio-section">
+        <h3>Audio Narration</h3>
+        <audio controls src="audio/sensors.mp3"></audio>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="nav-buttons">
+            <a href="index.html" class="btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+                Back: Introduction
+            </a>
+            <a href="models.html" class="btn-primary disabled" id="nextTutorialBtn">
+                <span id="nextBtnText">Scroll to unlock next tutorial →</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </a>
+        </div>
+    </nav>
+
+    <script>
+        // Carousel functionality (copied from models.html)
+        let currentSensor = 0;
+        const totalSensors = 6;
+
+        function getSensorCardWidth() {
+            const card = document.querySelector('.sensor-card');
+            if (!card) return 432;
+            const cardRect = card.getBoundingClientRect();
+            const gap = 32; // 2rem gap
+            return cardRect.width + gap;
+        }
+
+        function updateSensorCarousel() {
+            const track = document.getElementById('sensorCarouselTrack');
+            const cards = document.querySelectorAll('.sensor-card');
+            const dots = document.querySelectorAll('.carousel-dots .dot');
+            const cardWidth = getSensorCardWidth();
+
+            // Update track position
+            track.style.transform = `translateX(-${currentSensor * cardWidth}px)`;
+
+            // Update active states
+            cards.forEach((card, index) => {
+                card.classList.toggle('active', index === currentSensor);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSensor);
+            });
+        }
+
+        function nextSensor() {
+            currentSensor = (currentSensor + 1) % totalSensors;
+            updateSensorCarousel();
+        }
+
+        function previousSensor() {
+            currentSensor = (currentSensor - 1 + totalSensors) % totalSensors;
+            updateSensorCarousel();
+        }
+
+        function goToSensor(index) {
+            currentSensor = index;
+            updateSensorCarousel();
+            showSensorDetail(index);
+        }
+
+        // Show sensor detail section
+        function showSensorDetail(sensorIndex) {
+            // Hide all detail sections
+            const allDetails = document.querySelectorAll('.sensor-detail');
+            allDetails.forEach(detail => {
+                detail.classList.remove('active');
+            });
+
+            // Show selected detail section
+            const selectedDetail = document.getElementById(`sensor-detail-${sensorIndex}`);
+            if (selectedDetail) {
+                selectedDetail.classList.add('active');
+
+                // Smooth scroll to detail section
+                setTimeout(() => {
+                    selectedDetail.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            }
+
+            // Update carousel to show selected sensor
+            currentSensor = sensorIndex;
+            updateSensorCarousel();
+        }
+
+        // Auto-advance carousel every 8 seconds (copied from models.html)
+        let autoAdvance = setInterval(nextSensor, 8000);
+
+        // Pause auto-advance on hover
+        document.querySelector('.carousel-container').addEventListener('mouseenter', () => {
+            clearInterval(autoAdvance);
+        });
+
+        document.querySelector('.carousel-container').addEventListener('mouseleave', () => {
+            autoAdvance = setInterval(nextSensor, 8000);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                previousSensor();
+            } else if (e.key === 'ArrowRight') {
+                nextSensor();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            updateSensorCarousel();
+        });
+
+        // Global keyword highlighting function
+        function applyKeywordHighlighting() {
+            const keywords = [
+                '30 FPS', 'CameraX', 'accelerometers', 'gyroscopes', 'speakers', 'vibration motors',
+                'acceleration patterns', 'TensorFlow Lite', 'NNAPI/GPU delegates', 'ForegroundService',
+                'SmsManager', 'GPS coordinates', 'Android', 'IMU', 'SMS'
+            ];
+
+            const textNodes = [];
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        const parent = node.parentElement;
+                        if (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE' ||
+                            parent.classList.contains('highlight')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+
+            textNodes.forEach(textNode => {
+                let text = textNode.textContent;
+                let hasChanges = false;
+
+                keywords.forEach(keyword => {
+                    const regex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+                    if (regex.test(text)) {
+                        text = text.replace(regex, `<span class="highlight">${keyword}</span>`);
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges) {
+                    const wrapper = document.createElement('span');
+                    wrapper.innerHTML = text;
+                    textNode.parentNode.replaceChild(wrapper, textNode);
+                }
+            });
+        }
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate progress bar
+            const progressFill = document.querySelector('.progress-fill');
+            const targetProgress = progressFill.getAttribute('data-progress');
+            setTimeout(() => {
+                progressFill.style.width = targetProgress + '%';
+            }, 300);
+
+            // Initialize carousel
+            updateSensorCarousel();
+
+            // Apply keyword highlighting globally
+            applyKeywordHighlighting();
+
+            // Show first sensor detail by default
+            showSensorDetail(0);
+        });
+
+        // Deployment card interaction
+        function toggleDeploymentCard(card) {
+            // Remove active class from all cards
+            const allCards = document.querySelectorAll('.deployment-card');
+            allCards.forEach(c => c.classList.remove('active'));
+
+            // Add active class to clicked card
+            card.classList.add('active');
+
+            // Add haptic feedback if supported
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+
+
+        // Audio toggle functionality
+        let isPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('pageAudio');
+            const button = document.querySelector('.audio-button');
+
+            if (isPlaying) {
+                audio.pause();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            } else {
+                audio.play();
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+                isPlaying = true;
+            }
+
+            audio.onended = function() {
+                button.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+                isPlaying = false;
+            };
+        }
+
+        // Scroll-based bottom navigation and tutorial button
+        let nextTutorialUnlocked = false;
+        let bottomNavVisible = false;
+
+        function checkScrollProgress() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercentage = (scrollTop / documentHeight) * 100;
+
+            const bottomNav = document.querySelector('.bottom-nav');
+            const nextBtn = document.getElementById('nextTutorialBtn');
+            const btnText = document.getElementById('nextBtnText');
+
+            // Show bottom navigation when user scrolls 95% of the page (near the very end)
+            if (scrollPercentage >= 95 && !bottomNavVisible) {
+                bottomNavVisible = true;
+                bottomNav.classList.add('visible');
+            } else if (scrollPercentage < 95 && bottomNavVisible) {
+                bottomNavVisible = false;
+                bottomNav.classList.remove('visible');
+            }
+
+            // Enable next button when user scrolls 97% of the page (near the very end)
+            if (scrollPercentage >= 97 && !nextTutorialUnlocked) {
+                nextTutorialUnlocked = true;
+                nextBtn.classList.remove('disabled');
+                btnText.textContent = 'Next: Pose Models';
+                nextBtn.style.animation = 'pulse 2s infinite';
+
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+            }
+        }
+
+        // Add scroll listener
+        window.addEventListener('scroll', checkScrollProgress);
+
+        // Add pulse animation if not already added
+        if (!document.querySelector('#pulseAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'pulseAnimation';
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.05); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    </script>
+</body>
+</html>
